@@ -3,6 +3,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
+import { safeNext } from "@/lib/google-oauth";
 import { AVATAR_COLORS, AVATAR_EMOJIS } from "@/lib/occasions";
 import { normalizeEmail, requestLoginCode, verifyLoginCode } from "../auth";
 import { clientIp } from "../context";
@@ -18,11 +19,6 @@ import {
 } from "../guard";
 import { newId, newParticipantToken } from "../ids";
 import { setActiveProfile, signIn, signOut } from "../session";
-
-/** Só aceita caminhos internos, para o login não virar redirecionador aberto. */
-function safeNext(next: string): string {
-  return next.startsWith("/") && !next.startsWith("//") && !next.includes("\\") ? next : "/";
-}
 
 export type CodeRequest = { error?: string; email?: string; devCode?: string | null };
 

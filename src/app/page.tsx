@@ -21,7 +21,7 @@ const STEPS = [
   },
   {
     title: "Mande o link no WhatsApp",
-    body: "Cada pessoa entra com o e-mail e um código, sem senha. Criança sem e-mail entra pela conta de um responsável.",
+    body: "Cada pessoa entra com a própria conta, em um toque. Criança sem conta entra pela de um responsável.",
   },
   {
     title: "Cada um abre o seu papelzinho",
@@ -79,7 +79,7 @@ export default function Home({ searchParams }: PageProps<"/">) {
             </h1>
             <p className="mt-5 max-w-[34rem] text-lg text-ink-soft">
               Monte o grupo, mande o link e cada pessoa abre o seu papelzinho lacrado no
-              celular. A conta é só um e-mail e um código, e nem quem organiza fica sabendo quem
+              celular. Ninguém precisa decorar senha nova, e nem quem organiza fica sabendo quem
               tirou quem.
             </p>
             <div className="mt-7 flex flex-wrap items-center gap-4">

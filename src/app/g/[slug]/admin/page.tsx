@@ -262,7 +262,7 @@ async function Content({ params }: { params: PageProps<"/g/[slug]/admin">["param
             />
             <p className="hint mt-1">
               Cada pessoa ganha um convite pessoal, que você manda pelo botão ao lado do nome. Para
-              criança ou quem não tem e-mail, toque em “Cuidar eu mesmo”: o papelzinho dela fica
+              criança ou quem não tem conta, toque em “Cuidar eu mesmo”: o papelzinho dela fica
               na sua conta.
             </p>
             <SubmitButton className="btn btn-quiet mt-3" pendingLabel="Incluindo…">

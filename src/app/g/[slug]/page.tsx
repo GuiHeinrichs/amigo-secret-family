@@ -91,8 +91,7 @@ async function Invitation({
       {open && !user && (
         <div className="panel mt-6">
           <p className="text-ink-soft">
-            Para participar, entre com o seu e-mail. É só um código, sem senha, e o grupo fica
-            guardado na sua conta.
+            Para participar, entre na sua conta. Leva um toque, e o grupo fica guardado nela.
           </p>
           <Link
             href={`/entrar?next=${encodeURIComponent(`/g/${group.slug}`)}`}
@@ -273,7 +272,7 @@ async function MemberHome({
       {group.status === "montando" && (
         <>
           <section>
-            <h2 className="text-xl">Crianças e quem não tem e-mail</h2>
+            <h2 className="text-xl">Crianças e quem não tem conta</h2>
             <p className="mt-1 text-ink-soft">
               Inclua aqui quem fica sob a sua responsabilidade. O papelzinho dessa pessoa aparece
               na sua conta, e você troca de perfil no topo da página.
@@ -310,7 +309,7 @@ async function MemberHome({
         <h2 className="text-xl">Sua conta</h2>
         <p className="mt-1 text-ink-soft">
           Você entrou como <span className="font-semibold text-ink">{ctx.user?.email}</span>. Este
-          grupo aparece em qualquer aparelho em que você entrar com esse e-mail.
+          grupo aparece em qualquer aparelho em que você entrar com essa conta.
         </p>
         <form action={signOutAction} className="mt-3">
           <button type="submit" className="btn btn-quiet btn-sm">

@@ -1,11 +1,21 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { LoginForm } from "@/components/client/login-form";
 import { Breadcrumbs } from "@/components/breadcrumbs";
+import { LoginForm } from "@/components/client/login-form";
+import { GoogleLogo } from "@/components/icons";
+import { safeNext } from "@/lib/google-oauth";
+import { emailConfigured } from "@/server/email";
+import { googleConfigured } from "@/server/google";
 import { getUser } from "@/server/session";
 
 export const metadata: Metadata = { title: "Entrar" };
+
+const ERRORS: Record<string, string> = {
+  google: "Não deu para entrar com o Google. Tente de novo.",
+  "google-email": "Essa conta Google não tem um e-mail confirmado. Tente com outra conta.",
+  "google-indisponivel": "A entrada com Google não está configurada neste site.",
+};
 
 export default function LoginPage({ searchParams }: PageProps<"/entrar">) {
   return (
@@ -26,14 +36,57 @@ export default function LoginPage({ searchParams }: PageProps<"/entrar">) {
             <Form searchParams={searchParams} />
           </Suspense>
         </div>
+        <p className="hint mt-4">
+          Criança ou alguém sem conta? Um responsável entra e inclui a pessoa dentro do grupo.
+        </p>
       </main>
     </div>
   );
 }
 
 async function Form({ searchParams }: { searchParams: PageProps<"/entrar">["searchParams"] }) {
-  const { next } = await searchParams;
-  const target = typeof next === "string" && next.startsWith("/") && !next.startsWith("//") ? next : "/";
+  const { next, erro } = await searchParams;
+  const target = safeNext(typeof next === "string" ? next : null);
   if (await getUser()) redirect(target);
-  return <LoginForm next={target} />;
+
+  const google = googleConfigured();
+  // O código por e-mail só aparece onde funciona de verdade: no dev (o código
+  // vai para a tela), com remetente próprio configurado, ou quando não há
+  // outra forma de entrar.
+  const codeOnScreen = !emailConfigured() && process.env.NODE_ENV !== "production";
+  const email = codeOnScreen || !!process.env.EMAIL_FROM?.trim() || !google;
+  const error = typeof erro === "string" ? ERRORS[erro] : undefined;
+
+  return (
+    <div className="grid gap-5">
+      {error && (
+        <p role="alert" className="notice notice-error">
+          {error}
+        </p>
+      )}
+      {google && (
+        <div>
+          {/* <a> comum, e não <Link>: é uma rota que redireciona para fora do site. */}
+          <a
+            href={`/auth/google?next=${encodeURIComponent(target)}`}
+            className="btn btn-quiet btn-block"
+          >
+            <GoogleLogo />
+            Entrar com Google
+          </a>
+          <p className="hint mt-2">
+            Usamos só o seu nome e o seu e-mail. Nada é publicado em seu nome.
+          </p>
+        </div>
+      )}
+      {google && email && (
+        <p className="hint flex items-center gap-3 font-semibold" aria-hidden="true">
+          <span className="h-0.5 flex-1 bg-line" />
+          ou
+          <span className="h-0.5 flex-1 bg-line" />
+        </p>
+      )}
+      {email && <LoginForm next={target} />}
+    </div>
+  );
 }

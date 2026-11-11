@@ -94,11 +94,23 @@ export async function verifyLoginCode(email: string, code: string): Promise<stri
     throw new ActionError("Código incorreto. Confira os 6 dígitos e tente de novo.");
   }
   await db.delete(loginCodes).where(eq(loginCodes.id, row.id));
+  return findOrCreateUser(email);
+}
 
+/**
+ * A conta é identificada pelo e-mail, venha ele do código por e-mail ou do
+ * Google. Devolve o id, criando a conta no primeiro acesso.
+ */
+export async function findOrCreateUser(email: string, name?: string | null): Promise<string> {
+  const db = await getDb();
   const [existing] = await db.select().from(users).where(eq(users.email, email));
-  if (existing) return existing.id;
-  const id = newId();
-  await db.insert(users).values({ id, email }).onConflictDoNothing();
+  if (existing) {
+    if (!existing.name && name) {
+      await db.update(users).set({ name }).where(eq(users.id, existing.id));
+    }
+    return existing.id;
+  }
+  await db.insert(users).values({ id: newId(), email, name: name ?? null }).onConflictDoNothing();
   const [created] = await db.select().from(users).where(eq(users.email, email));
   return created.id;
 }
