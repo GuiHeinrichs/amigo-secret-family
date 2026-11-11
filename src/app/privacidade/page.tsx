@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Breadcrumbs } from "@/components/breadcrumbs";
+import { Garland } from "@/components/client/effects/garland";
 
 export const metadata: Metadata = {
   title: "Privacidade",
@@ -14,9 +15,10 @@ export default function PrivacyPage() {
   return (
     <div className="min-h-dvh">
       <header className="wrap">
-        <div className="mx-auto max-w-2xl px-5 py-4">
+        <div className="mx-auto max-w-2xl px-5 pb-9 pt-4">
           <Breadcrumbs items={[{ label: "Início", href: "/" }, { label: "Privacidade" }]} />
         </div>
+        <Garland />
       </header>
 
       <main className="mx-auto max-w-2xl px-5 pb-20 pt-8">

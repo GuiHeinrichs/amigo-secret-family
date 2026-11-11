@@ -20,18 +20,20 @@
 }
 
 /*
- * Tema. Cada ocasião só troca três cores-base (--brand-base, --leaf-base,
- * --gold); todo o resto é derivado aqui. As derivações ficam na classe
+ * Cores. Cada ocasião só troca três cores-base (--occ-brand, --occ-leaf,
+ * --occ-gold); todo o resto é derivado aqui. As derivações ficam na classe
  * .theme (e não em :root) porque precisam ser recalculadas no elemento
  * que redefine as cores-base.
+ *
+ * Por cima disso há dois temas visuais, escolhidos por quem usa e marcados
+ * em <html data-tema>: "natal" (padrão, com neve e luzes) e "festa" (claro e
+ * limpo, com bandeirinhas e confete). Os blocos deles ficam no fim do arquivo.
  */
-:root {
-  --brand-base: #c2183c;
-  --leaf-base: #0e5a45;
-  --gold: #e8a93b;
-}
-
 .theme {
+  /* --occ-* vêm da ocasião do grupo (estilo inline); sem grupo, valem os padrões. */
+  --brand-base: var(--occ-brand, #c2183c);
+  --leaf-base: var(--occ-leaf, #0e5a45);
+  --gold: var(--occ-gold, #e8a93b);
   --paper: color-mix(in oklab, var(--brand-base) 4%, #fffaf7);
   --paper-2: color-mix(in oklab, var(--brand-base) 9%, #fff5ef);
   --field: #ffffff;
@@ -506,4 +508,94 @@ p {
     animation-delay: 0ms !important;
     transition-duration: 1ms !important;
   }
+}
+
+/* ——— Temas visuais ——— */
+
+/* Peças que só existem em um dos temas. */
+html[data-tema="festa"] .so-natal,
+html[data-tema="natal"] .so-festa,
+html:not([data-tema]) .so-festa {
+  display: none !important;
+}
+
+.wrap {
+  position: relative;
+}
+
+/*
+ * Natal: neve acumulada no topo dos componentes. A altura acompanha --snow
+ * (0 a 1), que o script de efeitos aumenta conforme o tempo de uso.
+ */
+html[data-tema="natal"] :is(.panel, .btn-primary) {
+  position: relative;
+}
+html[data-tema="natal"] :is(.panel, .btn-primary, .snowy)::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  left: 8px;
+  right: 8px;
+  bottom: calc(100% - 5px);
+  height: calc(3px + var(--snow, 0.1) * 20px);
+  pointer-events: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 24' preserveAspectRatio='none'%3E%3Cpath fill='%23fff' d='M0 24C3 12 14 6 30 9 44 2 62 1 80 6c14-6 34-7 50-1 14-5 32-4 44 3 12-2 22 5 26 16z'/%3E%3C/svg%3E")
+    center bottom / 100% 100% no-repeat;
+  /* Contorno azulado: sem ele a neve some sobre o papel claro. */
+  filter: drop-shadow(0 1.5px 0 rgb(125 155 195 / 0.55))
+    drop-shadow(0 -0.5px 0 rgb(125 155 195 / 0.3));
+  transition: height 3s ease;
+}
+html[data-tema="natal"] .btn-primary::before {
+  left: 14px;
+  right: 14px;
+  bottom: calc(100% - 3px);
+  height: calc(2px + var(--snow, 0.1) * 10px);
+}
+html[data-tema="natal"] .btn-sm.btn-primary::before {
+  height: calc(2px + var(--snow, 0.1) * 7px);
+}
+
+/* Festa: sempre claro, superfícies brancas e a cor só nos detalhes. */
+html[data-tema="festa"] {
+  color-scheme: light;
+}
+html[data-tema="festa"] .theme {
+  --brand-base: var(--festa-brand, var(--occ-brand, #7b3fe4));
+  --leaf-base: var(--festa-leaf, var(--occ-leaf, #0b8f87));
+  --gold: var(--festa-gold, var(--occ-gold, #ffbe2e));
+  --paper: #ffffff;
+  --paper-2: color-mix(in oklab, var(--brand-base) 5%, #f6f7fb);
+  --field: #ffffff;
+  --line: color-mix(in oklab, var(--brand-base) 12%, #e4e6ee);
+  --ink: #1e1b2c;
+  --ink-soft: #5c5970;
+  --brand: var(--brand-base);
+  --brand-ink: #ffffff;
+  --leaf: var(--leaf-base);
+  /* Papel levemente amarelado: branco puro sumiria no fundo branco. */
+  --slip: color-mix(in oklab, var(--gold) 16%, #ffffff);
+  --danger: #b3261e;
+  --shadow: 30 30 60;
+}
+html[data-tema="festa"] .panel {
+  background: #ffffff;
+  box-shadow:
+    inset 0 0 0 1.5px var(--line),
+    0 10px 24px -16px rgb(30 30 60 / 0.35);
+}
+/* O papel de presente vira uma faixa clara salpicada de confete. */
+html[data-tema="festa"] .wrap {
+  background-color: color-mix(in oklab, var(--brand-base) 8%, #ffffff);
+  background-image:
+    radial-gradient(circle at 8px 10px, var(--brand-base) 2.5px, transparent 3px),
+    radial-gradient(circle at 30px 34px, var(--gold) 2.5px, transparent 3px),
+    radial-gradient(circle at 44px 14px, var(--leaf-base) 2px, transparent 2.5px);
+  background-size: 56px 48px;
+  color: var(--ink);
+}
+/* Sobre o branco, o papelzinho precisa de um contorno para não sumir. */
+html[data-tema="festa"] .slip {
+  filter: drop-shadow(0 0 0.75px rgb(30 30 60 / 0.5))
+    drop-shadow(0 10px 16px rgb(30 30 60 / 0.14));
 }

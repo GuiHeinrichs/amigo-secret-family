@@ -5,6 +5,7 @@ import {
   MAIN_OCCASION,
   MODE_KEYS,
   MODES,
+  occasionVars,
   OCCASIONS,
   OTHER_OCCASIONS,
   type ModeKey,
@@ -13,6 +14,7 @@ import {
 import { createGroup } from "@/server/actions/group";
 import { Breadcrumbs } from "../breadcrumbs";
 import { DateField, TimeField } from "./date-time";
+import { Garland } from "./effects/garland";
 import { MobileMenu } from "./mobile-menu";
 import { ActionForm, SubmitButton } from "./forms";
 
@@ -52,16 +54,10 @@ export function CreateWizard({
     <div
       className="theme min-h-dvh"
       data-mode={mode}
-      style={
-        {
-          "--brand-base": theme.brand,
-          "--leaf-base": theme.leaf,
-          "--gold": theme.gold,
-        } as CSSProperties
-      }
+      style={occasionVars(theme) as CSSProperties}
     >
       <header className="wrap">
-        <div className="mx-auto flex max-w-md items-center justify-between gap-2 px-5 py-3">
+        <div className="mx-auto flex max-w-md items-center justify-between gap-2 px-5 pb-9 pt-3">
           {/* Os passos já feitos viram atalhos para voltar. */}
           <Breadcrumbs
             items={[
@@ -74,6 +70,7 @@ export function CreateWizard({
           />
           <MobileMenu title="Criar grupo" email={email} />
         </div>
+        <Garland />
       </header>
       <main className="mx-auto max-w-md px-5 pb-16 pt-8">
         <p className="hint" aria-live="polite">

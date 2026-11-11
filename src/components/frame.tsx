@@ -1,24 +1,21 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { CSSProperties, ReactNode } from "react";
-import { occasionOf } from "@/lib/occasions";
+import { occasionOf, occasionVars } from "@/lib/occasions";
 import { switchProfile } from "@/server/actions/account";
 import { unreadCount } from "@/server/chat";
 import { getContext, type Ctx } from "@/server/context";
 import type { Group, Participant } from "@/server/db/schema";
 import { Breadcrumbs, type Crumb } from "./breadcrumbs";
+import { Garland } from "./client/effects/garland";
 import { MobileMenu, type MenuSection } from "./client/mobile-menu";
+import { ThemeSwitch } from "./client/theme-switch";
 import { Icon, type IconName } from "./icons";
 
 export type NavKey = "inicio" | "papelzinho" | "lista" | "conversas" | "festa" | "organizar";
 
 export function themeStyle(group: Pick<Group, "occasion">): CSSProperties {
-  const occasion = occasionOf(group.occasion);
-  return {
-    "--brand-base": occasion.brand,
-    "--leaf-base": occasion.leaf,
-    "--gold": occasion.gold,
-  } as CSSProperties;
+  return occasionVars(occasionOf(group.occasion)) as CSSProperties;
 }
 
 /** Resolve o grupo da URL ou responde 404. */
@@ -130,6 +127,7 @@ export async function GroupFrame({
               ...trail,
             ]}
           />
+          <ThemeSwitch className="hidden md:inline-flex" />
           {/* No celular, "Organizar" e o resto da navegação ficam no menu lateral. */}
           {isAdmin && active !== "organizar" && (
             <Link
@@ -142,6 +140,7 @@ export async function GroupFrame({
           )}
           <MobileMenu title={group.name} sections={menu} email={ctx.user?.email ?? null} />
         </div>
+        <Garland />
       </header>
 
       <div className={`mx-auto ${width} px-5`}>
@@ -189,7 +188,7 @@ export async function GroupFrame({
       {items.length > 0 && me && (
         <nav
           aria-label="Seções do grupo"
-          className="fixed inset-x-0 bottom-0 z-20 border-t-2 border-line bg-paper pb-[env(safe-area-inset-bottom)]"
+          className="snowy fixed inset-x-0 bottom-0 z-20 border-t-2 border-line bg-paper pb-[env(safe-area-inset-bottom)]"
         >
           <ul className="mx-auto flex max-w-md">
             {items.map((item) => {

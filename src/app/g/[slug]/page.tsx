@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { AvatarPicker } from "@/components/client/avatar-picker";
+import { Scene } from "@/components/client/effects/scene";
 import { ActionForm, SubmitButton } from "@/components/client/forms";
 import { EventDetails } from "@/components/event-details";
 import { Avatar, FrameSkeleton, GroupFrame, loadCtx } from "@/components/frame";
@@ -317,6 +318,8 @@ async function MemberHome({
           </button>
         </form>
       </section>
+
+      <Scene />
     </GroupFrame>
   );
 }

@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { Garland } from "@/components/client/effects/garland";
+import { Scene } from "@/components/client/effects/scene";
 import { MobileMenu } from "@/components/client/mobile-menu";
+import { ThemeSwitch } from "@/components/client/theme-switch";
 import { Icon, type IconName } from "@/components/icons";
 import { modeOf, occasionOf } from "@/lib/occasions";
 import { signOutAction } from "@/server/actions/account";
@@ -55,7 +58,9 @@ const FEATURES: { icon: IconName; title: string; body: string }[] = [
 export default function Home({ searchParams }: PageProps<"/">) {
   return (
     <div className="min-h-dvh">
-      <div className="wrap h-16" aria-hidden="true" />
+      <div className="wrap h-16" aria-hidden="true">
+        <Garland />
+      </div>
 
       <div className="mx-auto max-w-5xl px-5">
         <div className="flex items-start justify-between gap-3">
@@ -145,6 +150,8 @@ export default function Home({ searchParams }: PageProps<"/">) {
           </ul>
         </section>
 
+        <Scene />
+
         <div className="py-14 text-center">
           <Link href="/criar" className="btn btn-primary text-lg">
             Criar um grupo
@@ -175,7 +182,8 @@ async function Account() {
   const user = await getUser();
   // No celular a conta fica no menu lateral; em telas maiores, aqui mesmo.
   return (
-    <div className="mt-3 flex min-w-0 items-center">
+    <div className="mt-3 flex min-w-0 items-center gap-3">
+      <ThemeSwitch className="hidden md:inline-flex" />
       {user ? (
         <form action={signOutAction} className="hidden min-w-0 items-center gap-3 md:flex">
           <span className="hint truncate">{user.email}</span>

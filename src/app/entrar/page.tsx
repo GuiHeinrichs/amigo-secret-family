@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { Breadcrumbs } from "@/components/breadcrumbs";
+import { Garland } from "@/components/client/effects/garland";
 import { LoginForm } from "@/components/client/login-form";
 import { GoogleLogo } from "@/components/icons";
 import { safeNext } from "@/lib/google-oauth";
@@ -22,9 +23,10 @@ export default function LoginPage({ searchParams }: PageProps<"/entrar">) {
   return (
     <div className="min-h-dvh">
       <header className="wrap">
-        <div className="mx-auto max-w-md px-5 py-4">
+        <div className="mx-auto max-w-md px-5 pb-9 pt-4">
           <Breadcrumbs items={[{ label: "Início", href: "/" }, { label: "Entrar" }]} />
         </div>
+        <Garland />
       </header>
       <main className="mx-auto max-w-md px-5 pb-16">
         <h1 className="mt-8 text-4xl">Entre na sua conta</h1>

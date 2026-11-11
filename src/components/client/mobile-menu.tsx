@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { signOutAction } from "@/server/actions/account";
 import { Icon, type IconName } from "../icons";
+import { ThemeSwitch } from "./theme-switch";
 
 export type MenuSection = {
   href: string;
@@ -281,6 +282,11 @@ export function MobileMenu({
               </li>
             </ul>
           </nav>
+
+          <div className="menu-item flex flex-none items-center justify-between gap-3 border-t-2 border-dashed border-line px-5 py-3">
+            <span className="font-semibold">Tema</span>
+            <ThemeSwitch />
+          </div>
 
           <div className="menu-item flex-none border-t-2 border-dashed border-line px-5 py-4">
             {email ? (

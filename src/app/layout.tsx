@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Kalam } from "next/font/google";
+import { ThemeEffects } from "@/components/client/effects/theme-effects";
 import { Toaster } from "@/components/client/toaster";
+import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
 const bricolage = Bricolage_Grotesque({
@@ -57,9 +59,19 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="pt-BR" className={`${bricolage.variable} ${kalam.variable} antialiased`}>
+    // O script abaixo grava data-tema no <html> antes de o React hidratar.
+    <html
+      lang="pt-BR"
+      data-tema="natal"
+      suppressHydrationWarning
+      className={`${bricolage.variable} ${kalam.variable} antialiased`}
+    >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body className="theme">
         {children}
+        <ThemeEffects />
         <Toaster />
       </body>
     </html>

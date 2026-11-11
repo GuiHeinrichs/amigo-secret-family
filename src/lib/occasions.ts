@@ -16,6 +16,8 @@ export type Occasion = {
   brand: string;
   leaf: string;
   gold: string;
+  /** Cores usadas no tema Festa, quando as da ocasião não combinam com ele. */
+  festa?: { brand: string; leaf: string; gold: string };
 };
 
 export const OCCASIONS: Record<OccasionKey, Occasion> = {
@@ -28,6 +30,8 @@ export const OCCASIONS: Record<OccasionKey, Occasion> = {
     brand: "#C2183C",
     leaf: "#0E5A45",
     gold: "#E8A93B",
+    // Vermelho e verde são a cara do Natal; no tema Festa entram cores de festa.
+    festa: { brand: "#7B3FE4", leaf: "#0B8F87", gold: "#FFBE2E" },
   },
   pascoa: {
     label: "Páscoa",
@@ -76,6 +80,20 @@ export const OCCASION_KEYS = Object.keys(OCCASIONS) as OccasionKey[];
 /** A ocasião em destaque e as demais festividades, em segundo plano. */
 export const MAIN_OCCASION: OccasionKey = "natal";
 export const OTHER_OCCASIONS = OCCASION_KEYS.filter((key) => key !== MAIN_OCCASION);
+
+/** Variáveis CSS de uma ocasião; o stylesheet deriva o resto a partir delas. */
+export function occasionVars(occasion: Occasion): Record<string, string> {
+  return {
+    "--occ-brand": occasion.brand,
+    "--occ-leaf": occasion.leaf,
+    "--occ-gold": occasion.gold,
+    ...(occasion.festa && {
+      "--festa-brand": occasion.festa.brand,
+      "--festa-leaf": occasion.festa.leaf,
+      "--festa-gold": occasion.festa.gold,
+    }),
+  };
+}
 
 export function occasionOf(key: string): Occasion {
   return OCCASIONS[(key as OccasionKey) in OCCASIONS ? (key as OccasionKey) : "outro"];
