@@ -15,7 +15,7 @@ export type Db = PgliteDatabase<typeof schema>;
 const store = globalThis as unknown as { __lacoDb?: Promise<Db> };
 
 async function create(): Promise<Db> {
-  const url = process.env.DATABASE_URL;
+  const url = process.env.DATABASE_URL?.trim();
   if (url) {
     const { Pool } = await import("pg");
     const { drizzle } = await import("drizzle-orm/node-postgres");
@@ -29,7 +29,7 @@ async function create(): Promise<Db> {
   const { drizzle } = await import("drizzle-orm/pglite");
   const { migrate } = await import("drizzle-orm/pglite/migrator");
   const dir =
-    process.env.PGLITE_DIR ?? path.join(process.cwd(), ".data", "pglite");
+    process.env.PGLITE_DIR?.trim() || path.join(process.cwd(), ".data", "pglite");
   if (!dir.startsWith("memory://")) await mkdir(dir, { recursive: true });
   const db = drizzle(new PGlite(dir), { schema });
   await migrate(db, { migrationsFolder: path.join(process.cwd(), "drizzle") });

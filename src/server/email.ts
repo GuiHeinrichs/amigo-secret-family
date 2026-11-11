@@ -6,7 +6,7 @@ import "server-only";
  * no dev local, a tela de login mostra o código em vez de mandá-lo.
  */
 export function emailConfigured(): boolean {
-  return !!process.env.RESEND_API_KEY;
+  return !!process.env.RESEND_API_KEY?.trim();
 }
 
 export async function sendEmail(message: {
@@ -15,14 +15,14 @@ export async function sendEmail(message: {
   text: string;
   html: string;
 }): Promise<{ sent: boolean }> {
-  const key = process.env.RESEND_API_KEY;
+  const key = process.env.RESEND_API_KEY?.trim();
   if (!key) return { sent: false };
 
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      from: process.env.EMAIL_FROM ?? "Laço <onboarding@resend.dev>",
+      from: process.env.EMAIL_FROM?.trim() || "Laço <onboarding@resend.dev>",
       to: [message.to],
       subject: message.subject,
       text: message.text,

@@ -26,7 +26,7 @@ const cookieOptions = {
 };
 
 export function sessionSecret(): Uint8Array {
-  const value = process.env.SESSION_SECRET;
+  const value = process.env.SESSION_SECRET?.trim();
   if (!value) {
     if (process.env.VERCEL) {
       throw new Error("SESSION_SECRET não está configurada neste ambiente.");
