@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { Breadcrumbs } from "@/components/breadcrumbs";
@@ -38,6 +39,11 @@ export default function LoginPage({ searchParams }: PageProps<"/entrar">) {
         </div>
         <p className="hint mt-4">
           Criança ou alguém sem conta? Um responsável entra e inclui a pessoa dentro do grupo.
+        </p>
+        <p className="hint mt-3">
+          <Link href="/privacidade" className="underline underline-offset-4">
+            Política de privacidade
+          </Link>
         </p>
       </main>
     </div>

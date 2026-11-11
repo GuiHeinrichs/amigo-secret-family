@@ -150,6 +150,11 @@ export default function Home({ searchParams }: PageProps<"/">) {
             Criar um grupo
           </Link>
           <p className="hint mt-4">Grátis, sem senha e sem instalar nada.</p>
+          <p className="hint mt-6">
+            <Link href="/privacidade" className="underline underline-offset-4">
+              Política de privacidade
+            </Link>
+          </p>
         </div>
       </div>
     </div>
