@@ -1,6 +1,22 @@
+import { existsSync, readFileSync } from "node:fs";
 import { defineConfig, devices } from "@playwright/test";
 
 const PORT = Number(process.env.PORT ?? 3000);
+
+// Os testes criam dezenas de contas e grupos de mentira e dependem de o login
+// mostrar o código na tela. Com um banco de verdade no .env.local eles
+// sujariam esse banco, então a suíte se recusa a rodar.
+if (
+  !process.env.E2E_ALLOW_REAL_DB &&
+  existsSync(".env.local") &&
+  /^DATABASE_URL=.+/m.test(readFileSync(".env.local", "utf8"))
+) {
+  throw new Error(
+    "O .env.local aponta para um banco de verdade (DATABASE_URL). Os testes ponta a ponta " +
+      "gravariam dados de teste nele. Comente DATABASE_URL e RESEND_API_KEY no .env.local, " +
+      "reinicie o servidor de desenvolvimento e rode de novo.",
+  );
+}
 
 export default defineConfig({
   testDir: "./e2e",

@@ -13,6 +13,7 @@ import {
   messages,
   participants,
   themes,
+  users,
 } from "../db/schema";
 import {
   ActionError,
@@ -26,7 +27,7 @@ import {
 } from "../guard";
 import { newId, newParticipantToken } from "../ids";
 import { rateLimit } from "../ratelimit";
-import { addMembership } from "../session";
+import { setActiveProfile } from "../session";
 
 const MAX_PEOPLE = 100;
 
@@ -58,13 +59,15 @@ export async function joinGroup(
   const result = await run(async () => {
     const ctx = await requireCtx(form.get("slug"));
     slug = ctx.group.slug;
+    const user = ctx.user;
+    if (!user) throw new ActionError("Entre na sua conta para participar.");
     if (ctx.me) return;
     if (ctx.group.status !== "montando") {
       throw new ActionError(
-        "O sorteio deste grupo já aconteceu. Peça o seu link pessoal a quem organiza.",
+        "O sorteio deste grupo já aconteceu. Peça a quem organiza o convite com o seu nome.",
       );
     }
-    if (!(await rateLimit(`entrar:${await clientIp()}`, 30, 3600))) {
+    if (!(await rateLimit(`entrar:${user.id}:${await clientIp()}`, 30, 3600))) {
       throw new ActionError("Muitas tentativas em pouco tempo. Tente de novo mais tarde.");
     }
     const name = text(form, "name", 40);
@@ -85,11 +88,13 @@ export async function joinGroup(
     await db.insert(participants).values({
       id,
       groupId: ctx.group.id,
+      userId: user.id,
       name,
       ...avatarFrom(form, people.length),
       token: newParticipantToken(),
     });
-    await addMembership({ g: ctx.group.id, p: id });
+    if (!user.name) await db.update(users).set({ name }).where(eq(users.id, user.id));
+    await setActiveProfile(ctx.group.id, id);
   });
   if (result.error) return result;
   redirect(`/g/${slug}`);

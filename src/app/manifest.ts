@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Laço — amigo secreto",
     short_name: "Laço",
-    description: "Amigo secreto no papelzinho: sorteio pelo link, sem criar conta.",
+    description: "Amigo secreto no papelzinho: sorteio pelo link, conta sem senha.",
     lang: "pt-BR",
     start_url: "/",
     display: "standalone",

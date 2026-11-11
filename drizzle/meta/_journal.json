@@ -8,6 +8,20 @@
       "when": 1794427092519,
       "tag": "0000_yellow_mordo",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794430591688,
+      "tag": "0001_contas",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794430604887,
+      "tag": "0002_sem_link_de_organizador",
+      "breakpoints": true
     }
   ]
 }

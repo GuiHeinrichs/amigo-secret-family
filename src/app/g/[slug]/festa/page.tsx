@@ -22,7 +22,7 @@ async function Content({ params }: { params: PageProps<"/g/[slug]/festa">["param
   const state = await getPartyState(ctx);
 
   return (
-    <GroupFrame ctx={ctx} active="festa" wide>
+    <GroupFrame ctx={ctx} active="festa" wide trail={[{ label: "Festa" }]}>
       <PartyBoard slug={group.slug} initial={state} />
     </GroupFrame>
   );

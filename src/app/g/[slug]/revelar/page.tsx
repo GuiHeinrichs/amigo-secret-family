@@ -21,7 +21,7 @@ async function Content({ params }: { params: PageProps<"/g/[slug]/revelar">["par
   if (!me || group.status === "montando") redirect(`/g/${group.slug}`);
 
   return (
-    <GroupFrame ctx={ctx} active="papelzinho">
+    <GroupFrame ctx={ctx} active="papelzinho" trail={[{ label: "Papelzinho" }]}>
       <Reveal
         slug={group.slug}
         alreadyOpened={!!me.openedAt}

@@ -1,10 +1,17 @@
 import "server-only";
 import { getContext, type Ctx } from "./context";
-import type { Participant } from "./db/schema";
+import type { Participant, User } from "./db/schema";
+import { getUser } from "./session";
 
 export type ActionState = { error?: string; ok?: boolean; note?: string };
 
 export class ActionError extends Error {}
+
+export async function requireUser(): Promise<User> {
+  const user = await getUser();
+  if (!user) throw new ActionError("Entre na sua conta para continuar.");
+  return user;
+}
 
 export async function requireCtx(slug: unknown): Promise<Ctx> {
   if (typeof slug !== "string" || !slug) throw new ActionError("Grupo não encontrado.");
@@ -23,9 +30,8 @@ export async function requireMember(
   slug: unknown,
 ): Promise<Ctx & { me: Participant }> {
   const ctx = await requireCtx(slug);
-  if (!ctx.me) {
-    throw new ActionError("Abra o seu link pessoal neste aparelho para continuar.");
-  }
+  if (!ctx.user) throw new ActionError("Entre na sua conta para continuar.");
+  if (!ctx.me) throw new ActionError("Você ainda não participa deste grupo.");
   return ctx as Ctx & { me: Participant };
 }
 

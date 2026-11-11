@@ -19,19 +19,20 @@ import {
   groups,
   participants,
   themes,
+  users,
 } from "../db/schema";
 import {
   ActionError,
   optional,
   requireAdmin,
+  requireUser,
   run,
   text,
   wholeNumber,
   type ActionState,
 } from "../guard";
-import { newAdminToken, newId, newParticipantToken, newSlug } from "../ids";
+import { newId, newParticipantToken, newSlug } from "../ids";
 import { rateLimit } from "../ratelimit";
-import { addMembership, removeMembership } from "../session";
 
 const detailsSchema = z.object({
   name: z.string().min(2, "Dê um nome ao grupo.").max(60),
@@ -78,7 +79,8 @@ export async function createGroup(
 ): Promise<ActionState> {
   let slug = "";
   const result = await run(async () => {
-    if (!(await rateLimit(`criar:${await clientIp()}`, 10, 3600))) {
+    const user = await requireUser();
+    if (!(await rateLimit(`criar:${user.id}:${await clientIp()}`, 10, 3600))) {
       throw new ActionError("Muitos grupos criados em pouco tempo. Tente de novo mais tarde.");
     }
     const details = readDetails(form);
@@ -90,23 +92,22 @@ export async function createGroup(
     const db = await getDb();
     const groupId = newId();
     slug = newSlug(details.name);
-    let participantId: string | undefined;
 
     await db.transaction(async (tx) => {
       await tx.insert(groups).values({
         id: groupId,
         slug,
+        ownerId: user.id,
         ...details,
         mode,
         occasion,
         themed,
-        adminToken: newAdminToken(),
       });
       if (organizer) {
-        participantId = newId();
         await tx.insert(participants).values({
-          id: participantId,
+          id: newId(),
           groupId,
+          userId: user.id,
           name: organizer,
           emoji: AVATAR_EMOJIS[0],
           color: AVATAR_COLORS[0],
@@ -118,9 +119,11 @@ export async function createGroup(
           .insert(themes)
           .values(THEME_PRESETS.map((label) => ({ id: newId(), groupId, label })));
       }
+      // Guarda o nome na conta para preencher os próximos formulários.
+      if (organizer && !user.name) {
+        await tx.update(users).set({ name: organizer }).where(eq(users.id, user.id));
+      }
     });
-
-    await addMembership({ g: groupId, p: participantId, a: 1 });
   });
   if (result.error) return result;
   redirect(`/g/${slug}/admin`);
@@ -178,7 +181,7 @@ export async function newEdition(
 ): Promise<ActionState> {
   let slug = "";
   const result = await run(async () => {
-    const { group, me } = await requireAdmin(form.get("slug"));
+    const { group, user } = await requireAdmin(form.get("slug"));
     const db = await getDb();
     const people = await db
       .select()
@@ -210,7 +213,7 @@ export async function newEdition(
         budgetMax: group.budgetMax,
         place: group.place,
         maxSteals: group.maxSteals,
-        adminToken: newAdminToken(),
+        ownerId: user!.id,
         previousGroupId: group.id,
       });
       if (people.length > 0) {
@@ -218,6 +221,8 @@ export async function newEdition(
           people.map((p) => ({
             id: idMap.get(p.id)!,
             groupId,
+            // As contas acompanham: ninguém precisa entrar de novo.
+            userId: p.userId,
             name: p.name,
             emoji: p.emoji,
             color: p.color,
@@ -252,8 +257,6 @@ export async function newEdition(
           .values(oldThemes.map((t) => ({ id: newId(), groupId, label: t.label })));
       }
     });
-
-    await addMembership({ g: groupId, p: me ? idMap.get(me.id) : undefined, a: 1 });
   });
   if (result.error) return result;
   redirect(`/g/${slug}/admin`);
@@ -270,7 +273,6 @@ export async function deleteGroup(
     }
     const db = await getDb();
     await db.delete(groups).where(eq(groups.id, group.id));
-    await removeMembership(group.id);
   });
   if (result.error) return result;
   redirect("/");

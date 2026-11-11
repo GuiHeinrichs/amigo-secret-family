@@ -3,13 +3,13 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { AvatarPicker } from "@/components/client/avatar-picker";
-import { CopyButton } from "@/components/client/copy-button";
 import { ActionForm, SubmitButton } from "@/components/client/forms";
 import { EventDetails } from "@/components/event-details";
 import { Avatar, FrameSkeleton, GroupFrame, loadCtx } from "@/components/frame";
 import { WhatsAppIcon } from "@/components/icons";
 import { plural, whatsappUrl } from "@/lib/format";
 import { AVATAR_COLORS, AVATAR_EMOJIS, modeOf } from "@/lib/occasions";
+import { addDependent, signOutAction } from "@/server/actions/account";
 import { joinGroup } from "@/server/actions/participant";
 import { getOrigin, type Ctx } from "@/server/context";
 import type { Participant } from "@/server/db/schema";
@@ -17,16 +17,23 @@ import { listPeople, wishCounts } from "@/server/queries";
 
 export const metadata: Metadata = { title: "Amigo secreto" };
 
-export default function GroupPage({ params }: PageProps<"/g/[slug]">) {
+export default function GroupPage({ params, searchParams }: PageProps<"/g/[slug]">) {
   return (
     <Suspense fallback={<FrameSkeleton />}>
-      <Content params={params} />
+      <Content params={params} searchParams={searchParams} />
     </Suspense>
   );
 }
 
-async function Content({ params }: { params: PageProps<"/g/[slug]">["params"] }) {
+async function Content({
+  params,
+  searchParams,
+}: {
+  params: PageProps<"/g/[slug]">["params"];
+  searchParams: PageProps<"/g/[slug]">["searchParams"];
+}) {
   const ctx = await loadCtx(params);
+  const { convite } = await searchParams;
   // Quem só organiza e chega depois do sorteio não tem o que fazer no convite.
   if (!ctx.me && ctx.isAdmin && ctx.group.status !== "montando") {
     redirect(`/g/${ctx.group.slug}/admin`);
@@ -35,24 +42,37 @@ async function Content({ params }: { params: PageProps<"/g/[slug]">["params"] })
   return ctx.me ? (
     <MemberHome ctx={ctx} me={ctx.me} people={people} />
   ) : (
-    <Invitation ctx={ctx} people={people} />
+    <Invitation ctx={ctx} people={people} inviteUsed={convite === "usado"} />
   );
 }
 
-async function Invitation({ ctx, people }: { ctx: Ctx; people: Participant[] }) {
-  const { group } = ctx;
+async function Invitation({
+  ctx,
+  people,
+  inviteUsed,
+}: {
+  ctx: Ctx;
+  people: Participant[];
+  inviteUsed: boolean;
+}) {
+  const { group, user } = ctx;
   const mode = modeOf(group.mode);
   const open = group.status === "montando";
 
   return (
     <GroupFrame ctx={ctx}>
+      {inviteUsed && (
+        <p role="alert" className="notice notice-error mb-5">
+          Esse convite já foi usado por outra conta. Se era para ser seu, avise quem organiza.
+        </p>
+      )}
       <h1 className="text-4xl">
         {open ? "Você foi chamado para o sorteio" : "O sorteio já aconteceu"}
       </h1>
       <p className="mt-3 text-ink-soft">
         {open
           ? `${group.name} vai ser no modo ${mode.label}. ${mode.description}`
-          : "Para ver o seu papelzinho, abra neste aparelho o link pessoal que quem organiza mandou para você."}
+          : "Se quem organiza incluiu o seu nome, peça o convite pessoal para ver o seu papelzinho."}
       </p>
 
       {people.length > 0 && (
@@ -68,7 +88,22 @@ async function Invitation({ ctx, people }: { ctx: Ctx; people: Participant[] }) 
         </div>
       )}
 
-      {open && (
+      {open && !user && (
+        <div className="panel mt-6">
+          <p className="text-ink-soft">
+            Para participar, entre com o seu e-mail. É só um código, sem senha, e o grupo fica
+            guardado na sua conta.
+          </p>
+          <Link
+            href={`/entrar?next=${encodeURIComponent(`/g/${group.slug}`)}`}
+            className="btn btn-primary btn-block mt-4"
+          >
+            Entrar para participar
+          </Link>
+        </div>
+      )}
+
+      {open && user && (
         <ActionForm action={joinGroup} fields={{ slug: group.slug }} className="panel mt-6 grid gap-5">
           <div>
             <label className="label" htmlFor="name">
@@ -82,6 +117,7 @@ async function Invitation({ ctx, people }: { ctx: Ctx; people: Participant[] }) 
               required
               autoComplete="given-name"
               placeholder="Ex.: Tia Neide"
+              defaultValue={user.name ?? ""}
             />
           </div>
           <AvatarPicker
@@ -114,7 +150,6 @@ async function MemberHome({
   const ladrao = group.mode === "ladrao";
   const counts = await wishCounts(people.map((p) => p.id));
   const origin = await getOrigin();
-  const personalLink = `${origin}/k/${me.token}`;
   const inviteText = `Entra no nosso amigo secreto "${group.name}": ${origin}${base}`;
 
   return (
@@ -235,15 +270,53 @@ async function MemberHome({
 
       <hr className="cutline" />
 
+      {group.status === "montando" && (
+        <>
+          <section>
+            <h2 className="text-xl">Crianças e quem não tem e-mail</h2>
+            <p className="mt-1 text-ink-soft">
+              Inclua aqui quem fica sob a sua responsabilidade. O papelzinho dessa pessoa aparece
+              na sua conta, e você troca de perfil no topo da página.
+            </p>
+            <ActionForm
+              action={addDependent}
+              fields={{ slug: group.slug }}
+              resetOnSuccess
+              className="mt-3"
+            >
+              <label className="label" htmlFor="dependent-name">
+                Nome da pessoa
+              </label>
+              <div className="flex gap-2">
+                <input
+                  id="dependent-name"
+                  name="name"
+                  className="input flex-1"
+                  maxLength={40}
+                  required
+                  placeholder="Ex.: Pedrinho"
+                />
+                <SubmitButton className="btn btn-quiet" pendingLabel="Incluindo…">
+                  Incluir
+                </SubmitButton>
+              </div>
+            </ActionForm>
+          </section>
+          <hr className="cutline" />
+        </>
+      )}
+
       <section>
-        <h2 className="text-xl">Seu link pessoal</h2>
+        <h2 className="text-xl">Sua conta</h2>
         <p className="mt-1 text-ink-soft">
-          É com ele que você entra de outro aparelho. Guarde e não mostre para ninguém: quem
-          abrir este link vê o seu papelzinho.
+          Você entrou como <span className="font-semibold text-ink">{ctx.user?.email}</span>. Este
+          grupo aparece em qualquer aparelho em que você entrar com esse e-mail.
         </p>
-        <div className="mt-3">
-          <CopyButton value={personalLink} label="Copiar meu link" />
-        </div>
+        <form action={signOutAction} className="mt-3">
+          <button type="submit" className="btn btn-quiet btn-sm">
+            Sair da conta
+          </button>
+        </form>
       </section>
     </GroupFrame>
   );

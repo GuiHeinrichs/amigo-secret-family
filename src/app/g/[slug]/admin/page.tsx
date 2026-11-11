@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import QRCode from "qrcode";
 import { Suspense } from "react";
 import { CopyButton } from "@/components/client/copy-button";
+import { DateField, TimeField } from "@/components/client/date-time";
 import { ActionForm, ConfirmSubmit, SubmitButton } from "@/components/client/forms";
 import { Avatar, FrameSkeleton, GroupFrame, loadCtx } from "@/components/frame";
 import { Icon, WhatsAppIcon } from "@/components/icons";
@@ -12,6 +13,7 @@ import { formatDateTime, plural, whatsappUrl } from "@/lib/format";
 import { MODE_KEYS, MODES, OCCASION_KEYS, OCCASIONS } from "@/lib/occasions";
 import { resetDraw, runDraw } from "@/server/actions/draw";
 import { deleteGroup, newEdition, updateGroup } from "@/server/actions/group";
+import { adoptParticipant } from "@/server/actions/account";
 import {
   addExclusion,
   addParticipants,
@@ -48,13 +50,12 @@ async function Content({ params }: { params: PageProps<"/g/[slug]/admin">["param
   const themeRows = group.themed ? await listThemes(group.id) : [];
   const origin = await getOrigin();
   const inviteLink = `${origin}/g/${slug}`;
-  const adminLink = `${origin}/k/${group.adminToken}`;
   const qr = building ? await QRCode.toString(inviteLink, { type: "svg", margin: 1 }) : "";
   const opened = people.filter((p) => p.openedAt).length;
   const nameOf = (id: string) => people.find((p) => p.id === id)?.name ?? "alguém";
 
   return (
-    <GroupFrame ctx={ctx} active="organizar">
+    <GroupFrame ctx={ctx} active="organizar" trail={[{ label: "Organizar" }]}>
       <h1 className="text-3xl">Organizar</h1>
 
       {/* ——— Próximo passo ——— */}
@@ -118,7 +119,7 @@ async function Content({ params }: { params: PageProps<"/g/[slug]/admin">["param
         <section className="mt-8">
           <h2 className="text-xl">Convite</h2>
           <p className="mt-1 text-ink-soft">
-            Quem abrir este link entra no grupo só com o nome.
+            Quem abrir este link entra na conta e escolhe o nome para o sorteio.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <a
@@ -156,10 +157,17 @@ async function Content({ params }: { params: PageProps<"/g/[slug]/admin">["param
         )}
         <ul className="mt-2">
           {people.map((p) => {
-            const link = `${origin}/k/${p.token}`;
-            const message = building
-              ? `Oi, ${p.name}! Você está no amigo secreto "${group.name}". Este é o seu link pessoal, não mostre para ninguém: ${link}`
+            // Sem conta ainda: o convite pessoal liga este nome à conta de quem abrir.
+            const claimed = !!p.userId;
+            const link = claimed ? inviteLink : `${origin}/k/${p.token}`;
+            const message = !claimed
+              ? `Oi, ${p.name}! Você está no amigo secreto "${group.name}". Entre por este convite, que é só seu: ${link}`
               : `Oi, ${p.name}! O sorteio do "${group.name}" já saiu. Abra o seu papelzinho: ${link}`;
+            const account = !claimed
+              ? "Ainda não entrou"
+              : p.userId === ctx.user?.id
+                ? "Na sua conta"
+                : "Entrou";
             const wishes = counts.get(p.id) ?? 0;
             return (
               <li key={p.id} className="border-b-2 border-dashed border-line py-3">
@@ -168,30 +176,48 @@ async function Content({ params }: { params: PageProps<"/g/[slug]/admin">["param
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-bold">{p.name}</p>
                     <p className="hint text-sm">
+                      {account}
                       {building
-                        ? ladrao
-                          ? "No grupo"
-                          : wishes > 0
-                            ? `Lista com ${plural(wishes, "item", "itens")}`
-                            : "Ainda sem lista"
+                        ? ladrao || wishes === 0
+                          ? ""
+                          : `, lista com ${plural(wishes, "item", "itens")}`
                         : p.openedAt
-                          ? `Abriu em ${formatDateTime(p.openedAt)}`
-                          : "Ainda não abriu"}
+                          ? `, abriu em ${formatDateTime(p.openedAt)}`
+                          : claimed
+                            ? ", ainda não abriu"
+                            : ""}
                     </p>
                   </div>
                 </div>
                 <div className="mt-2 flex flex-wrap items-start gap-2 pl-[3.25rem]">
-                  <a
-                    href={whatsappUrl(message)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn btn-sm btn-quiet"
-                  >
-                    <WhatsAppIcon size={18} />
-                    {building || p.openedAt ? "Mandar link" : "Cutucar"}
-                    <span className="sr-only"> para {p.name}</span>
-                  </a>
-                  <CopyButton value={link} label={`Copiar o link de ${p.name}`} iconOnly />
+                  {(!claimed || (!building && !p.openedAt)) && (
+                    <a
+                      href={whatsappUrl(message)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-sm btn-quiet"
+                    >
+                      <WhatsAppIcon size={18} />
+                      {claimed ? "Cutucar" : "Mandar convite"}
+                      <span className="sr-only"> para {p.name}</span>
+                    </a>
+                  )}
+                  {!claimed && (
+                    <>
+                      <CopyButton value={link} label={`Copiar o convite de ${p.name}`} iconOnly />
+                      <ActionForm
+                        action={adoptParticipant}
+                        fields={{ slug, participantId: p.id }}
+                        className="min-w-0"
+                        toastNote
+                      >
+                        <SubmitButton className="btn btn-sm btn-quiet">
+                          Cuidar eu mesmo
+                          <span className="sr-only"> de {p.name}</span>
+                        </SubmitButton>
+                      </ActionForm>
+                    </>
+                  )}
                   {group.status !== "festa" && group.status !== "encerrado" && (
                     <ActionForm
                       action={removeParticipant}
@@ -235,7 +261,9 @@ async function Content({ params }: { params: PageProps<"/g/[slug]/admin">["param
               placeholder={"Um nome por linha\nEx.: Vó Lourdes"}
             />
             <p className="hint mt-1">
-              Cada pessoa ganha um link pessoal, que você manda pelo botão ao lado do nome.
+              Cada pessoa ganha um convite pessoal, que você manda pelo botão ao lado do nome. Para
+              criança ou quem não tem e-mail, toque em “Cuidar eu mesmo”: o papelzinho dela fica
+              na sua conta.
             </p>
             <SubmitButton className="btn btn-quiet mt-3" pendingLabel="Incluindo…">
               <Icon name="plus" size={18} />
@@ -454,25 +482,13 @@ async function Content({ params }: { params: PageProps<"/g/[slug]/admin">["param
               <label className="label" htmlFor="eventDate">
                 Dia da troca
               </label>
-              <input
-                id="eventDate"
-                name="eventDate"
-                type="date"
-                className="input"
-                defaultValue={group.eventDate ?? ""}
-              />
+              <DateField id="eventDate" name="eventDate" defaultValue={group.eventDate} />
             </div>
             <div>
               <label className="label" htmlFor="eventTime">
                 Hora
               </label>
-              <input
-                id="eventTime"
-                name="eventTime"
-                type="time"
-                className="input"
-                defaultValue={group.eventTime ?? ""}
-              />
+              <TimeField id="eventTime" name="eventTime" defaultValue={group.eventTime} />
             </div>
           </div>
           <div>
@@ -520,17 +536,6 @@ async function Content({ params }: { params: PageProps<"/g/[slug]/admin">["param
         </ActionForm>
       </details>
 
-      <hr className="cutline" />
-
-      <section>
-        <h2 className="text-xl">Seu link de organizador</h2>
-        <p className="mt-1 text-ink-soft">
-          Guarde este link: é o único jeito de voltar a organizar o grupo em outro aparelho.
-        </p>
-        <div className="mt-3">
-          <CopyButton value={adminLink} label="Copiar link de organizador" />
-        </div>
-      </section>
 
       <hr className="cutline" />
 
@@ -540,8 +545,8 @@ async function Content({ params }: { params: PageProps<"/g/[slug]/admin">["param
           <div>
             <h3 className="text-lg">Fazer a próxima edição</h3>
             <p className="hint mt-1">
-              Cria um grupo novo com as mesmas pessoas. O sorteio de lá evita repetir os pares
-              daqui. Este grupo continua existindo.
+              Cria um grupo novo com as mesmas pessoas, já ligadas às contas delas. O sorteio de
+              lá evita repetir os pares daqui. Este grupo continua existindo.
             </p>
             <ActionForm action={newEdition} fields={fields} className="mt-3">
               <SubmitButton className="btn btn-quiet" pendingLabel="Criando…">

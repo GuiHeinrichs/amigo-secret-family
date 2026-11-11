@@ -48,7 +48,7 @@ async function Content({ params }: { params: PageProps<"/g/[slug]/chat">["params
   const unreadMystery = await unreadCount(me, "misterio");
 
   return (
-    <GroupFrame ctx={ctx} active="conversas">
+    <GroupFrame ctx={ctx} active="conversas" trail={[{ label: "Conversas" }]}>
       <h1 className="text-3xl">Conversas</h1>
       <p className="mt-2 text-ink-soft">
         São duas conversas separadas. Em nenhuma delas o nome de quem tirou aparece.

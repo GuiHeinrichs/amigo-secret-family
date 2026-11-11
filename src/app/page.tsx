@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { MobileMenu } from "@/components/client/mobile-menu";
 import { Icon, type IconName } from "@/components/icons";
 import { modeOf, occasionOf } from "@/lib/occasions";
+import { signOutAction } from "@/server/actions/account";
 import { listMyGroups } from "@/server/queries";
-import { getMemberships } from "@/server/session";
+import { getUser } from "@/server/session";
 
 const STATUS_LABEL: Record<string, string> = {
   montando: "Esperando o sorteio",
@@ -19,7 +21,7 @@ const STEPS = [
   },
   {
     title: "Mande o link no WhatsApp",
-    body: "Cada pessoa entra só com o nome. Casal que não pode se tirar? É só marcar.",
+    body: "Cada pessoa entra com o e-mail e um código, sem senha. Criança sem e-mail entra pela conta de um responsável.",
   },
   {
     title: "Cada um abre o seu papelzinho",
@@ -56,10 +58,15 @@ export default function Home({ searchParams }: PageProps<"/">) {
       <div className="wrap h-16" aria-hidden="true" />
 
       <div className="mx-auto max-w-5xl px-5">
-        <p className="slip -mt-6 inline-flex -rotate-1 items-center gap-2 rounded-lg px-4 py-2 text-xl font-extrabold">
-          <Icon name="bow" size={24} className="text-brand" />
-          Laço
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          <p className="slip -mt-6 inline-flex -rotate-1 items-center gap-2 rounded-lg px-4 py-2 text-xl font-extrabold">
+            <Icon name="bow" size={24} className="text-brand" />
+            Laço
+          </p>
+          <Suspense>
+            <Account />
+          </Suspense>
+        </div>
 
         <Suspense>
           <LinkNotice searchParams={searchParams} />
@@ -72,7 +79,8 @@ export default function Home({ searchParams }: PageProps<"/">) {
             </h1>
             <p className="mt-5 max-w-[34rem] text-lg text-ink-soft">
               Monte o grupo, mande o link e cada pessoa abre o seu papelzinho lacrado no
-              celular. Ninguém cria conta, e nem quem organiza fica sabendo quem tirou quem.
+              celular. A conta é só um e-mail e um código, e nem quem organiza fica sabendo quem
+              tirou quem.
             </p>
             <div className="mt-7 flex flex-wrap items-center gap-4">
               <Link href="/criar" className="btn btn-primary text-lg">
@@ -141,7 +149,7 @@ export default function Home({ searchParams }: PageProps<"/">) {
           <Link href="/criar" className="btn btn-primary text-lg">
             Criar um grupo
           </Link>
-          <p className="hint mt-4">Grátis, sem cadastro e sem instalar nada.</p>
+          <p className="hint mt-4">Grátis, sem senha e sem instalar nada.</p>
         </div>
       </div>
     </div>
@@ -153,24 +161,48 @@ async function LinkNotice({ searchParams }: { searchParams: PageProps<"/">["sear
   if (link !== "invalido") return null;
   return (
     <p role="alert" className="notice notice-error mt-6">
-      Esse link não vale mais. Peça um novo a quem organiza o grupo.
+      Esse convite não vale mais. Peça um novo a quem organiza o grupo.
     </p>
   );
 }
 
+async function Account() {
+  const user = await getUser();
+  // No celular a conta fica no menu lateral; em telas maiores, aqui mesmo.
+  return (
+    <div className="mt-3 flex min-w-0 items-center">
+      {user ? (
+        <form action={signOutAction} className="hidden min-w-0 items-center gap-3 md:flex">
+          <span className="hint truncate">{user.email}</span>
+          <button type="submit" className="btn btn-quiet btn-sm">
+            Sair
+          </button>
+        </form>
+      ) : (
+        <Link href="/entrar" className="btn btn-quiet btn-sm hidden md:inline-flex">
+          Entrar
+        </Link>
+      )}
+      <MobileMenu email={user?.email ?? null} />
+    </div>
+  );
+}
+
 async function MyGroups() {
-  const mine = await listMyGroups(await getMemberships());
+  const user = await getUser();
+  if (!user) return null;
+  const mine = await listMyGroups(user.id);
   if (mine.length === 0) return null;
   return (
     <section className="pt-8">
-      <h2 className="text-2xl">Seus grupos neste aparelho</h2>
+      <h2 className="text-2xl">Seus grupos</h2>
       <ul className="mt-4 grid gap-3 md:grid-cols-2">
-        {mine.map(({ group, isAdmin, participates }) => {
+        {mine.map(({ group, isAdmin, names }) => {
           const occasion = occasionOf(group.occasion);
           return (
             <li key={group.id}>
               <Link
-                href={participates ? `/g/${group.slug}` : `/g/${group.slug}/admin`}
+                href={names.length > 0 ? `/g/${group.slug}` : `/g/${group.slug}/admin`}
                 className="panel flex items-center gap-3"
               >
                 <span className="avatar" style={{ background: occasion.brand }} aria-hidden="true">
@@ -182,6 +214,9 @@ async function MyGroups() {
                     {modeOf(group.mode).label}, {STATUS_LABEL[group.status]?.toLowerCase()}
                     {isAdmin ? " (você organiza)" : ""}
                   </span>
+                  {names.length > 1 && (
+                    <span className="hint block">Na sua conta: {names.join(", ")}</span>
+                  )}
                 </span>
               </Link>
             </li>

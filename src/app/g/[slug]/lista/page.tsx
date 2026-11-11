@@ -31,7 +31,7 @@ async function Content({ params }: { params: PageProps<"/g/[slug]/lista">["param
   const wishes = await listWishes(me.id);
 
   return (
-    <GroupFrame ctx={ctx} active="lista">
+    <GroupFrame ctx={ctx} active="lista" trail={[{ label: "Minha lista" }]}>
       <h1 className="text-3xl">{mode.wishTitle}</h1>
       <p className="mt-2 text-ink-soft">
         Só quem tirar você vê esta lista. Dá para mexer nela até o dia da troca.

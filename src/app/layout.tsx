@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: { default: "Laço — amigo secreto no papelzinho", template: "%s · Laço" },
   description:
-    "Amigo secreto para a família e os amigos: sorteio pelo link, sem criar conta, com papelzinho lacrado, conversa anônima e modo festa.",
+    "Amigo secreto para a família e os amigos: sorteio pelo link, conta sem senha, papelzinho lacrado, conversa anônima e modo festa.",
   applicationName: "Laço",
   appleWebApp: { capable: true, title: "Laço", statusBarStyle: "default" },
 };

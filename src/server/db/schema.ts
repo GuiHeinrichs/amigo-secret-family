@@ -10,8 +10,33 @@ import {
 
 const ts = (name: string) => timestamp(name, { withTimezone: true });
 
+export const users = pgTable("users", {
+  id: text("id").primaryKey(),
+  /** Sempre em minúsculas. */
+  email: text("email").notNull().unique(),
+  /** Como a pessoa gosta de ser chamada; preenche os formulários de entrada. */
+  name: text("name"),
+  createdAt: ts("created_at").notNull().defaultNow(),
+});
+
+/** Códigos de 6 dígitos enviados por e-mail para entrar. */
+export const loginCodes = pgTable(
+  "login_codes",
+  {
+    id: text("id").primaryKey(),
+    email: text("email").notNull(),
+    codeHash: text("code_hash").notNull(),
+    expiresAt: ts("expires_at").notNull(),
+    attempts: integer("attempts").notNull().default(0),
+    createdAt: ts("created_at").notNull().defaultNow(),
+  },
+  (t) => [index("login_codes_email_idx").on(t.email)],
+);
+
 export const groups = pgTable("groups", {
   id: text("id").primaryKey(),
+  /** Conta de quem organiza. Nulo só em grupos criados antes de existirem contas. */
+  ownerId: text("owner_id").references(() => users.id, { onDelete: "set null" }),
   slug: text("slug").notNull().unique(),
   name: text("name").notNull(),
   occasion: text("occasion").notNull().default("natal"),
@@ -27,7 +52,6 @@ export const groups = pgTable("groups", {
   eventTime: text("event_time"),
   place: text("place"),
   message: text("message"),
-  adminToken: text("admin_token").notNull().unique(),
   /** montando | sorteado | festa | encerrado */
   status: text("status").notNull().default("montando"),
   drawnAt: ts("drawn_at"),
@@ -43,9 +67,16 @@ export const participants = pgTable(
     groupId: text("group_id")
       .notNull()
       .references(() => groups.id, { onDelete: "cascade" }),
+    /**
+     * Conta que cuida deste participante. Uma conta pode cuidar de vários no
+     * mesmo grupo (ela mesma e crianças, por exemplo). Nulo enquanto o nome
+     * incluído por quem organiza ainda não foi assumido por ninguém.
+     */
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
     name: text("name").notNull(),
     emoji: text("emoji").notNull(),
     color: text("color").notNull(),
+    /** Convite pessoal: quem abrir /k/[token] logado assume este participante. */
     token: text("token").notNull().unique(),
     likes: text("likes"),
     dislikes: text("dislikes"),
@@ -56,7 +87,10 @@ export const participants = pgTable(
     position: integer("position"),
     createdAt: ts("created_at").notNull().defaultNow(),
   },
-  (t) => [index("participants_group_idx").on(t.groupId)],
+  (t) => [
+    index("participants_group_idx").on(t.groupId),
+    index("participants_user_idx").on(t.userId),
+  ],
 );
 
 export const exclusions = pgTable(
@@ -203,6 +237,7 @@ export const rateLimits = pgTable("rate_limits", {
   windowStart: ts("window_start").notNull(),
 });
 
+export type User = typeof users.$inferSelect;
 export type Group = typeof groups.$inferSelect;
 export type Participant = typeof participants.$inferSelect;
 export type Assignment = typeof assignments.$inferSelect;

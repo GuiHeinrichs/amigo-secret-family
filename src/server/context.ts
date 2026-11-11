@@ -1,39 +1,42 @@
 import "server-only";
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { cache } from "react";
 import { getDb } from "./db/client";
-import { groups, participants, type Group, type Participant } from "./db/schema";
-import { getMemberships } from "./session";
+import { groups, participants, type Group, type Participant, type User } from "./db/schema";
+import { getActiveProfiles, getUser } from "./session";
 
 export type Ctx = {
   group: Group;
-  /** Participante deste aparelho no grupo, se houver. */
+  /** Conta logada, se houver. */
+  user: User | null;
+  /** Participantes deste grupo sob responsabilidade da conta (ela e dependentes). */
+  profiles: Participant[];
+  /** O perfil que está "na tela" agora. */
   me: Participant | null;
+  /** A conta é a de quem organiza. */
   isAdmin: boolean;
 };
 
-/** Quem é este aparelho dentro do grupo `slug`. `null` se o grupo não existe. */
+/** Quem é a conta logada dentro do grupo `slug`. `null` se o grupo não existe. */
 export const getContext = cache(async (slug: string): Promise<Ctx | null> => {
-  // O cookie vem primeiro: ler um dado da requisição avisa o Next de que tudo
+  // A sessão vem primeiro: ler um dado da requisição avisa o Next de que tudo
   // daqui em diante (banco, relógio) só existe em tempo de requisição.
-  const memberships = await getMemberships();
+  const user = await getUser();
+  const active = await getActiveProfiles();
   const db = await getDb();
   const [group] = await db.select().from(groups).where(eq(groups.slug, slug));
   if (!group) return null;
 
-  const membership = memberships.find((m) => m.g === group.id);
-  let me: Participant | null = null;
-  if (membership?.p) {
-    const [row] = await db
-      .select()
-      .from(participants)
-      .where(
-        and(eq(participants.id, membership.p), eq(participants.groupId, group.id)),
-      );
-    me = row ?? null;
-  }
-  return { group, me, isAdmin: membership?.a === 1 };
+  const profiles = user
+    ? await db
+        .select()
+        .from(participants)
+        .where(and(eq(participants.groupId, group.id), eq(participants.userId, user.id)))
+        .orderBy(asc(participants.createdAt), asc(participants.id))
+    : [];
+  const me = profiles.find((p) => p.id === active[group.id]) ?? profiles[0] ?? null;
+  return { group, user, profiles, me, isAdmin: !!user && group.ownerId === user.id };
 });
 
 export async function getOrigin(): Promise<string> {

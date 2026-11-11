@@ -19,10 +19,12 @@ export type Occasion = {
 };
 
 export const OCCASIONS: Record<OccasionKey, Occasion> = {
+  // A chave continua "natal" por causa dos grupos já gravados; para quem usa
+  // o app, esta é a opção principal: o amigo secreto tradicional.
   natal: {
-    label: "Natal",
-    hint: "Ceia, rabanada e papel de presente",
-    emoji: "🎄",
+    label: "Amigo secreto",
+    hint: "O tradicional de fim de ano, no Natal ou quando a turma quiser",
+    emoji: "🎁",
     brand: "#C2183C",
     leaf: "#0E5A45",
     gold: "#E8A93B",
@@ -62,7 +64,7 @@ export const OCCASIONS: Record<OccasionKey, Occasion> = {
   outro: {
     label: "Outra ocasião",
     hint: "Qualquer desculpa para trocar presente",
-    emoji: "🎁",
+    emoji: "🎉",
     brand: "#6D28D9",
     leaf: "#0F6A62",
     gold: "#F4B400",
@@ -70,6 +72,10 @@ export const OCCASIONS: Record<OccasionKey, Occasion> = {
 };
 
 export const OCCASION_KEYS = Object.keys(OCCASIONS) as OccasionKey[];
+
+/** A ocasião em destaque e as demais festividades, em segundo plano. */
+export const MAIN_OCCASION: OccasionKey = "natal";
+export const OTHER_OCCASIONS = OCCASION_KEYS.filter((key) => key !== MAIN_OCCASION);
 
 export function occasionOf(key: string): Occasion {
   return OCCASIONS[(key as OccasionKey) in OCCASIONS ? (key as OccasionKey) : "outro"];

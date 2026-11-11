@@ -46,7 +46,7 @@ async function Content({ params }: { params: PageProps<"/g/[slug]/amigo">["param
   ].filter((row) => row.value);
 
   return (
-    <GroupFrame ctx={ctx} active="papelzinho">
+    <GroupFrame ctx={ctx} active="papelzinho" trail={[{ label: "Meu amigo" }]}>
       <p className="hint">Seu {mode.friend} é</p>
       <div className="mt-2 flex items-center gap-4">
         <Avatar person={friend} size="avatar-lg" />

@@ -2,9 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { CSSProperties, ReactNode } from "react";
 import { occasionOf } from "@/lib/occasions";
+import { switchProfile } from "@/server/actions/account";
 import { unreadCount } from "@/server/chat";
 import { getContext, type Ctx } from "@/server/context";
 import type { Group, Participant } from "@/server/db/schema";
+import { Breadcrumbs, type Crumb } from "./breadcrumbs";
+import { MobileMenu, type MenuSection } from "./client/mobile-menu";
 import { Icon, type IconName } from "./icons";
 
 export type NavKey = "inicio" | "papelzinho" | "lista" | "conversas" | "festa" | "organizar";
@@ -83,6 +86,7 @@ export async function GroupFrame({
   children,
   wide = false,
   nav = true,
+  trail = [],
 }: {
   ctx: Ctx;
   active?: NavKey;
@@ -90,30 +94,53 @@ export async function GroupFrame({
   /** Telão da festa: usa a largura toda em telas grandes. */
   wide?: boolean;
   nav?: boolean;
+  /** Níveis abaixo do grupo na trilha, ex.: [{ label: "Conversas" }]. */
+  trail?: Crumb[];
 }) {
-  const { group, me, isAdmin } = ctx;
+  const { group, me, isAdmin, profiles } = ctx;
   const occasion = occasionOf(group.occasion);
-  const items = nav ? await navItems(ctx) : [];
+  const sections = await navItems(ctx);
+  // A barra de baixo pode ser dispensada (ex.: na conversa); o menu lateral, não.
+  const items = nav ? sections : [];
+  const menu: MenuSection[] = sections.map((item) => ({
+    href: item.href,
+    label: item.label,
+    icon: item.icon,
+    badge: item.badge,
+    current: item.key === active,
+  }));
+  if (isAdmin) {
+    menu.push({
+      href: `/g/${group.slug}/admin`,
+      label: "Organizar",
+      icon: "gear",
+      current: active === "organizar",
+    });
+  }
   const width = wide ? "max-w-md lg:max-w-4xl" : "max-w-md";
 
   return (
     <div className="theme min-h-dvh" data-mode={group.mode} style={themeStyle(group)}>
       <header className="wrap">
         <div className={`mx-auto flex ${width} items-center justify-between gap-2 px-5 pb-10 pt-3`}>
-          <Link href="/" className="chip !bg-slip !text-slip-ink">
-            <Icon name="back" size={16} />
-            Meus grupos
-          </Link>
-          {isAdmin && (
+          <Breadcrumbs
+            items={[
+              { label: "Início", href: "/" },
+              { label: group.name, href: `/g/${group.slug}` },
+              ...trail,
+            ]}
+          />
+          {/* No celular, "Organizar" e o resto da navegação ficam no menu lateral. */}
+          {isAdmin && active !== "organizar" && (
             <Link
               href={`/g/${group.slug}/admin`}
-              className="chip !bg-slip !text-slip-ink"
-              aria-current={active === "organizar" ? "page" : undefined}
+              className="chip hidden flex-none !bg-slip !text-slip-ink md:inline-flex"
             >
               <Icon name="gear" size={16} />
               Organizar
             </Link>
           )}
+          <MobileMenu title={group.name} sections={menu} email={ctx.user?.email ?? null} />
         </div>
       </header>
 
@@ -125,6 +152,33 @@ export async function GroupFrame({
           </Link>
         </p>
       </div>
+
+      {/* Quem cuida de mais de uma pessoa no grupo escolhe aqui qual está vendo. */}
+      {profiles.length > 1 && me && (
+        <div className={`mx-auto ${width} px-5 pt-4`}>
+          <div
+            role="group"
+            aria-label="Perfis desta conta no grupo"
+            className="flex flex-wrap items-center gap-2"
+          >
+            <span className="hint text-sm">Vendo como</span>
+            {profiles.map((profile) => (
+              <form key={profile.id} action={switchProfile.bind(null, group.slug, profile.id)}>
+                <button
+                  type="submit"
+                  aria-pressed={profile.id === me.id}
+                  className={`chip !py-1 !pl-1 ${
+                    profile.id === me.id ? "!bg-ink !text-paper" : ""
+                  }`}
+                >
+                  <Avatar person={profile} size="avatar-sm" />
+                  {profile.name}
+                </button>
+              </form>
+            ))}
+          </div>
+        </div>
+      )}
 
       <main
         className={`mx-auto ${width} px-5 pt-7 ${items.length > 0 ? "pb-28" : nav ? "pb-16" : "pb-0"}`}

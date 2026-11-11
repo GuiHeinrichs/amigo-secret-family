@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { Chat } from "@/components/client/chat";
 import { Avatar, FrameSkeleton, GroupFrame, loadCtx } from "@/components/frame";
-import { Icon } from "@/components/icons";
 import { QUICK_QUESTIONS } from "@/lib/occasions";
 import { chatAvailable, isChatSide, readThread } from "@/server/chat";
 
@@ -31,12 +29,16 @@ async function Content({
   if (!thread) redirect(`${base}/chat`);
 
   return (
-    <GroupFrame ctx={ctx} active="conversas" nav={false}>
-      <Link href={`${base}/chat`} className="inline-flex items-center gap-1 font-semibold">
-        <Icon name="back" size={18} />
-        Conversas
-      </Link>
-      <div className="mt-3 flex items-center gap-3 border-b-2 border-dashed border-line pb-4">
+    <GroupFrame
+      ctx={ctx}
+      active="conversas"
+      nav={false}
+      trail={[
+        { label: "Conversas", href: `${base}/chat` },
+        { label: thread.peer ? thread.peer.name : "Quem tirou você" },
+      ]}
+    >
+      <div className="flex items-center gap-3 border-b-2 border-dashed border-line pb-4">
         {thread.peer ? (
           <Avatar person={thread.peer} />
         ) : (

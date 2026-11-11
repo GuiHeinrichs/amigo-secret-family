@@ -1,35 +1,63 @@
 import { expect, test, type Page } from "@playwright/test";
-import { addPeople, createGroup, draw, newPhone, openSlip, personalLink } from "./helpers";
+import {
+  addPeople,
+  claimPhone,
+  createGroup,
+  draw,
+  newPhone,
+  openSlip,
+  personalInvite,
+  switchTo,
+  testEmail,
+} from "./helpers";
 
-test("fluxo clássico: convite, sorteio, lacre, chat anônimo, lista e festa", async ({ browser }) => {
-  const ana = await newPhone(browser);
+test("fluxo clássico com contas: convite, dependente, sorteio, lacre, chat, lista e festa", async ({
+  browser,
+}) => {
+  const anaEmail = testEmail("ana");
+  const ana = await newPhone(browser, anaEmail);
+
+  // Criar grupo exige conta.
+  const anonimo = await (await browser.newContext()).newPage();
+  await anonimo.goto("/criar");
+  await expect(anonimo.getByRole("heading", { name: "Entre na sua conta" })).toBeVisible();
+
   const slug = await createGroup(ana, {
     name: "Natal de Teste",
     organizer: "Ana",
     themed: true,
   });
 
-  // Bia e Caio são incluídos por quem organiza; Duda entra pelo convite.
+  // Bia e Caio são incluídos por quem organiza e assumem o nome pelo convite pessoal.
   await addPeople(ana, ["Bia", "Caio"]);
+  const biaInvite = await personalInvite(ana, "Bia");
   const phones: Record<string, Page> = { Ana: ana };
-  for (const name of ["Bia", "Caio"]) {
-    const link = await personalLink(ana, name);
-    phones[name] = await newPhone(browser);
-    await phones[name].goto(link);
-    await expect(phones[name].getByRole("heading", { name: `Oi, ${name}` })).toBeVisible();
-  }
-  phones.Duda = await newPhone(browser);
+  phones.Bia = await claimPhone(browser, ana, "Bia");
+  phones.Caio = await claimPhone(browser, ana, "Caio");
+
+  // Duda entra pelo convite do grupo e inclui o filho, que não tem e-mail.
+  phones.Duda = await newPhone(browser, testEmail("duda"));
   await phones.Duda.goto(`/g/${slug}`);
   await phones.Duda.getByLabel("Como a turma chama você?").fill("Duda");
   await phones.Duda.getByRole("button", { name: "Entrar no sorteio" }).click();
   await expect(phones.Duda.getByRole("heading", { name: "Oi, Duda" })).toBeVisible();
+  await phones.Duda.getByLabel("Nome da pessoa").fill("Pedrinho");
+  await phones.Duda.getByRole("button", { name: "Incluir", exact: true }).click();
+  await expect(phones.Duda.getByText("Pedrinho entrou no sorteio")).toBeVisible();
+  phones.Pedrinho = phones.Duda;
 
-  // Nome repetido é recusado.
-  const intruso = await newPhone(browser);
+  // Sem conta, o convite do grupo pede login; com conta, nome repetido é recusado.
+  await anonimo.goto(`/g/${slug}`);
+  await expect(anonimo.getByRole("link", { name: "Entrar para participar" })).toBeVisible();
+  const intruso = await newPhone(browser, testEmail("intruso"));
   await intruso.goto(`/g/${slug}`);
   await intruso.getByLabel("Como a turma chama você?").fill("duda");
   await intruso.getByRole("button", { name: "Entrar no sorteio" }).click();
   await expect(intruso.getByText("Já tem alguém com esse nome")).toBeVisible();
+
+  // Convite pessoal vale uma vez: outra conta não entra pelo link da Bia.
+  await intruso.goto(biaInvite);
+  await expect(intruso.getByText("Esse convite já foi usado por outra conta")).toBeVisible();
 
   // Ana e Bia são um casal: não podem se tirar.
   await ana.reload();
@@ -47,22 +75,30 @@ test("fluxo clássico: convite, sorteio, lacre, chat anônimo, lista e festa", a
   expect(before.score).toBeNull();
   expect(JSON.stringify(before)).not.toContain("giverId");
 
-  // Depois do sorteio o convite não aceita mais ninguém.
+  // Depois do sorteio o convite do grupo não aceita mais ninguém.
   await intruso.goto(`/g/${slug}`);
   await expect(intruso.getByRole("heading", { name: "O sorteio já aconteceu" })).toBeVisible();
 
-  // Cada pessoa rompe o próprio lacre.
-  const names = Object.keys(phones);
+  // Cada pessoa rompe o próprio lacre; Duda abre o dela e o do Pedrinho.
+  const names = ["Ana", "Bia", "Caio", "Duda", "Pedrinho"];
+  const phoneAs = async (name: string) => {
+    if (name === "Duda" || name === "Pedrinho") await switchTo(phones.Duda, slug, name);
+    return phones[name];
+  };
   const pairs: Record<string, string> = {};
   for (const name of names) {
-    pairs[name] = await openSlip(phones[name], slug);
-    await expect(phones[name].getByText("Lacre rompido agora")).toBeVisible();
-    await expect(phones[name].getByText("Tema do presente:")).toBeVisible();
+    const phone = await phoneAs(name);
+    pairs[name] = await openSlip(phone, slug);
+    await expect(phone.getByText("Lacre rompido agora")).toBeVisible();
+    await expect(phone.getByText("Tema do presente:")).toBeVisible();
   }
   expect(Object.values(pairs).sort()).toEqual([...names].sort());
   for (const name of names) expect(pairs[name]).not.toBe(name);
   expect(pairs.Ana).not.toBe("Bia");
   expect(pairs.Bia).not.toBe("Ana");
+  // Mãe e filho na mesma conta não se tiram: um veria o par do outro.
+  expect(pairs.Duda).not.toBe("Pedrinho");
+  expect(pairs.Pedrinho).not.toBe("Duda");
 
   // Reabrir mostra quando o lacre foi rompido pela primeira vez.
   await ana.goto(`/g/${slug}/revelar`);
@@ -70,9 +106,16 @@ test("fluxo clássico: convite, sorteio, lacre, chat anônimo, lista e festa", a
   await ana.locator("button.seal").click();
   await expect(ana.getByText("foi aberto pela primeira vez em")).toBeVisible();
 
+  // A conta acompanha a pessoa: outro aparelho com o mesmo e-mail já vê o grupo e o amigo.
+  const anaTablet = await newPhone(browser, anaEmail);
+  await expect(anaTablet.getByRole("link", { name: /Natal de Teste/ })).toBeVisible();
+  await anaTablet.goto(`/g/${slug}/amigo`);
+  await expect(anaTablet.getByRole("heading", { name: pairs.Ana, exact: true })).toBeVisible();
+  await anaTablet.context().close();
+
   // Lista de desejos: quem Ana tirou escreve, Ana vê.
   const friend = pairs.Ana;
-  const friendPhone = phones[friend];
+  const friendPhone = await phoneAs(friend);
   await friendPhone.goto(`/g/${slug}/lista`);
   await friendPhone.getByLabel("Novo item").fill("Caneca gigante");
   await friendPhone.getByRole("button", { name: "Incluir na lista" }).click();
@@ -109,15 +152,15 @@ test("fluxo clássico: convite, sorteio, lacre, chat anônimo, lista e festa", a
 
   // Festa: palpites, revelação em cadeia e placar.
   await phones.Bia.goto(`/g/${slug}/festa`);
-  const bidGiver = names.find((n) => pairs[n] === "Bia")!;
-  await phones.Bia.getByLabel("Quem tirou você?").selectOption({ label: bidGiver });
+  const biaGiver = names.find((n) => pairs[n] === "Bia")!;
+  await phones.Bia.getByLabel("Quem tirou você?").selectOption({ label: biaGiver });
   await phones.Bia.getByRole("button", { name: "Guardar palpite" }).click();
   await expect(phones.Bia.getByText("Palpite guardado")).toBeVisible();
 
   await ana.goto(`/g/${slug}/festa`);
   await ana.getByRole("button", { name: "Começar a festa" }).click();
   await expect(ana.getByRole("heading", { name: "Hora dos palpites" })).toBeVisible();
-  await expect(ana.getByText("1 de 4 pessoas já palpitaram")).toBeVisible();
+  await expect(ana.getByText("1 de 5 pessoas já palpitaram")).toBeVisible();
   await ana.getByRole("button", { name: "Começar a revelação" }).click();
 
   for (let i = 0; i < names.length; i++) {
@@ -137,19 +180,76 @@ test("fluxo clássico: convite, sorteio, lacre, chat anônimo, lista e festa", a
   await expect(ana.getByText("1 detetive da noite: Bia.")).toBeVisible();
   // O celular da Bia acompanha o telão sozinho.
   await expect(phones.Bia.getByRole("heading", { name: "Placar dos palpites" })).toBeVisible();
+
+  // Sair da conta tira o acesso ao grupo neste aparelho.
+  await phones.Caio.goto("/");
+  await phones.Caio.getByRole("button", { name: "Abrir menu" }).click();
+  await phones.Caio.getByRole("button", { name: "Sair da conta" }).click();
+  await phones.Caio.getByRole("button", { name: "Abrir menu" }).click();
+  await expect(
+    phones.Caio.getByRole("dialog", { name: "Menu" }).getByRole("link", { name: "Entrar" }),
+  ).toBeVisible();
+  await phones.Caio.goto(`/g/${slug}/amigo`);
+  await expect(phones.Caio.getByRole("heading", { name: "O sorteio já aconteceu" })).toBeVisible();
+});
+
+test("quem organiza cuida de quem não tem e-mail", async ({ browser }) => {
+  const admin = await newPhone(browser, testEmail("org"));
+  const slug = await createGroup(admin, {
+    name: "Com a vó",
+    organizer: "Rita",
+    date: "24122026",
+    time: "2030",
+  });
+
+  // Data e hora digitadas no formato brasileiro chegam certas ao grupo.
+  await admin.goto(`/g/${slug}`);
+  await expect(admin.getByText("quinta-feira, 24 de dezembro, às 20h30")).toBeVisible();
+  // No painel, os campos voltam preenchidos e o calendário troca o dia.
+  await admin.goto(`/g/${slug}/admin`);
+  await admin.getByText("Detalhes do grupo").click();
+  await expect(admin.getByLabel("Dia da troca", { exact: true })).toHaveValue("24/12/2026");
+  await expect(admin.getByLabel("Hora", { exact: true })).toHaveValue("20:30");
+  await admin.getByRole("button", { name: /^Abrir calendário/ }).click();
+  await admin.getByRole("button", { name: "sexta-feira, 25 de dezembro de 2026" }).click();
+  await admin.getByRole("button", { name: /^Abrir seletor de hora/ }).click();
+  await admin.getByRole("button", { name: "21 horas", exact: true }).click();
+  await admin.getByRole("button", { name: "0 minutos", exact: true }).click();
+  await admin.getByRole("button", { name: "Salvar alterações" }).click();
+  await expect(admin.getByText("Alterações salvas.")).toBeVisible();
+
+  // A trilha leva de volta ao grupo e ao início.
+  const trail = admin.getByRole("navigation", { name: "Você está em" });
+  await trail.getByRole("link", { name: "Com a vó" }).click();
+  await expect(admin.getByText("sexta-feira, 25 de dezembro, às 21h")).toBeVisible();
+  await admin.goto(`/g/${slug}/admin`);
+
+  await addPeople(admin, ["Vó Lourdes", "Saulo"]);
+  await claimPhone(browser, admin, "Saulo");
+
+  await admin.reload();
+  await admin.getByRole("button", { name: "Cuidar eu mesmo de Vó Lourdes" }).click();
+  await expect(admin.getByText("Vó Lourdes agora está na sua conta")).toBeVisible();
+  await draw(admin);
+
+  await switchTo(admin, slug, "Vó Lourdes");
+  const grandma = await openSlip(admin, slug);
+  await switchTo(admin, slug, "Rita");
+  const mine = await openSlip(admin, slug);
+  // Com 3 pessoas não há como evitar que Rita e a vó se cruzem; o sorteio acontece mesmo assim.
+  expect(["Rita", "Saulo"]).toContain(grandma);
+  expect(["Vó Lourdes", "Saulo"]).toContain(mine);
 });
 
 test("alguém sai depois do sorteio e só uma pessoa muda de amigo", async ({ browser }) => {
-  const admin = await newPhone(browser);
+  const admin = await newPhone(browser, testEmail("org"));
   const slug = await createGroup(admin, { name: "Saída sem refazer" });
   const names = ["Eva", "Fábio", "Gil", "Hugo", "Iara"];
   await addPeople(admin, names);
 
   const phones: Record<string, Page> = {};
-  for (const name of names) {
-    phones[name] = await newPhone(browser);
-    await phones[name].goto(await personalLink(admin, name));
-  }
+  for (const name of names) phones[name] = await claimPhone(browser, admin, name);
+  await admin.reload();
   await draw(admin);
 
   const pairs: Record<string, string> = {};
@@ -157,8 +257,7 @@ test("alguém sai depois do sorteio e só uma pessoa muda de amigo", async ({ br
 
   const leaving = "Gil";
   const heir = names.find((n) => pairs[n] === leaving)!;
-  const remove = admin.getByRole("button", { name: `Tirar ${leaving} do grupo` });
-  await remove.click();
+  await admin.getByRole("button", { name: `Tirar ${leaving} do grupo` }).click();
   await admin.getByRole("button", { name: `Tirar ${leaving}?` }).click();
   await expect(admin.getByText(`Só ${heir} mudou de amigo`)).toBeVisible();
 
@@ -166,7 +265,10 @@ test("alguém sai depois do sorteio e só uma pessoa muda de amigo", async ({ br
     const now = await openSlip(phones[name], slug);
     expect(now).toBe(name === heir ? pairs[leaving] : pairs[name]);
   }
-  // Quem herdou tem um lacre novo; os outros já tinham aberto.
   await phones[heir].goto(`/g/${slug}`);
   await expect(phones[heir].getByRole("heading", { name: "Você já sabe quem tirou" })).toBeVisible();
+
+  // Quem saiu perde o acesso, mesmo logado.
+  await phones[leaving].goto(`/g/${slug}/amigo`);
+  await expect(phones[leaving].getByRole("heading", { name: "O sorteio já aconteceu" })).toBeVisible();
 });

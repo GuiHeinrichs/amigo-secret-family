@@ -78,6 +78,13 @@ export async function runDraw(
     const rules = await db.select().from(exclusions).where(eq(exclusions.groupId, group.id));
     const forbidden: Pair[] = rules.filter((r) => !r.soft).map((r) => [r.giverId, r.receiverId]);
     const soft: Pair[] = rules.filter((r) => r.soft).map((r) => [r.giverId, r.receiverId]);
+    // Quem cuida de mais de um participante (ex.: mãe e filho) veria o par
+    // inteiro se um tirasse o outro; evitamos sempre que o grupo permitir.
+    for (const a of people) {
+      for (const b of people) {
+        if (a.id !== b.id && a.userId && a.userId === b.userId) soft.push([a.id, b.id]);
+      }
+    }
     const result = draw(ids, { forbidden, soft });
 
     if (!result.ok) {
@@ -119,7 +126,7 @@ export async function runDraw(
     return {
       ok: true,
       note: result.softDropped
-        ? "Sorteio feito. Não deu para evitar todos os pares da edição anterior."
+        ? "Sorteio feito. Não deu para evitar todos os pares que o app tenta evitar (edição anterior e pessoas da mesma conta)."
         : "Sorteio feito. Nem você consegue ver quem tirou quem.",
     };
   });

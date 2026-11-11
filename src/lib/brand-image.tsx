@@ -68,7 +68,7 @@ export function ShareCard() {
           Amigo secreto no papelzinho
         </div>
         <div style={{ display: "flex", fontSize: 32, marginTop: 28, opacity: 0.92 }}>
-          Sorteio pelo link, sem criar conta. Cada um abre o seu no celular.
+          Sorteio pelo link, sem senha. Cada um abre o seu no celular.
         </div>
       </div>
       <div

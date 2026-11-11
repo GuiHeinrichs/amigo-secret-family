@@ -2,21 +2,32 @@
 
 import { useRef, useState, type CSSProperties } from "react";
 import {
+  MAIN_OCCASION,
   MODE_KEYS,
   MODES,
-  OCCASION_KEYS,
   OCCASIONS,
+  OTHER_OCCASIONS,
   type ModeKey,
   type OccasionKey,
 } from "@/lib/occasions";
 import { createGroup } from "@/server/actions/group";
+import { Breadcrumbs } from "../breadcrumbs";
+import { DateField, TimeField } from "./date-time";
+import { MobileMenu } from "./mobile-menu";
 import { ActionForm, SubmitButton } from "./forms";
 
 const STEPS = ["Ocasião", "Detalhes", "Jeito de jogar"] as const;
 
-export function CreateWizard() {
+export function CreateWizard({
+  organizerName = "",
+  email = null,
+}: {
+  organizerName?: string;
+  /** Conta logada, para o menu lateral. */
+  email?: string | null;
+}) {
   const [step, setStep] = useState(0);
-  const [occasion, setOccasion] = useState<OccasionKey>("natal");
+  const [occasion, setOccasion] = useState<OccasionKey>(MAIN_OCCASION);
   const [mode, setMode] = useState<ModeKey>("classico");
   const [nameError, setNameError] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
@@ -49,7 +60,21 @@ export function CreateWizard() {
         } as CSSProperties
       }
     >
-      <div className="wrap h-16" aria-hidden="true" />
+      <header className="wrap">
+        <div className="mx-auto flex max-w-md items-center justify-between gap-2 px-5 py-3">
+          {/* Os passos já feitos viram atalhos para voltar. */}
+          <Breadcrumbs
+            items={[
+              { label: "Início", href: "/" },
+              ...STEPS.slice(0, step + 1).map((label, index) => ({
+                label,
+                onSelect: index < step ? () => goTo(index) : undefined,
+              })),
+            ]}
+          />
+          <MobileMenu title="Criar grupo" email={email} />
+        </div>
+      </header>
       <main className="mx-auto max-w-md px-5 pb-16 pt-8">
         <p className="hint" aria-live="polite">
           Passo {step + 1} de {STEPS.length}: {STEPS[step]}
@@ -62,31 +87,51 @@ export function CreateWizard() {
           <section hidden={step !== 0}>
             <h1 className="text-3xl">Qual é a ocasião?</h1>
             <p className="hint mt-2">As cores do grupo acompanham a festa.</p>
-            <div className="mt-5 grid gap-3">
-              {OCCASION_KEYS.map((key) => (
-                <label key={key} className="choice">
-                  <input
-                    type="radio"
-                    name="occasion-choice"
-                    checked={occasion === key}
-                    onChange={() => setOccasion(key)}
-                  />
-                  <span className="flex items-center gap-3">
-                    <span
-                      className="avatar"
-                      style={{ background: OCCASIONS[key].brand }}
-                      aria-hidden="true"
-                    >
-                      {OCCASIONS[key].emoji}
-                    </span>
-                    <span>
-                      <span className="block font-bold">{OCCASIONS[key].label}</span>
-                      <span className="hint block">{OCCASIONS[key].hint}</span>
-                    </span>
+
+            {/* A opção principal vem grande e já marcada. */}
+            <label className="choice mt-5 !p-5">
+              <input
+                type="radio"
+                name="occasion-choice"
+                checked={occasion === MAIN_OCCASION}
+                onChange={() => setOccasion(MAIN_OCCASION)}
+              />
+              <span className="flex items-center gap-4">
+                <span
+                  className="avatar avatar-lg"
+                  style={{ background: OCCASIONS[MAIN_OCCASION].brand }}
+                  aria-hidden="true"
+                >
+                  {OCCASIONS[MAIN_OCCASION].emoji}
+                </span>
+                <span>
+                  <span className="block text-2xl font-extrabold leading-tight">
+                    {OCCASIONS[MAIN_OCCASION].label}
                   </span>
-                </label>
-              ))}
-            </div>
+                  <span className="hint mt-1 block">{OCCASIONS[MAIN_OCCASION].hint}</span>
+                </span>
+              </span>
+            </label>
+
+            <fieldset className="mt-6">
+              <legend className="hint font-semibold">Ou é outra festividade?</legend>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                {OTHER_OCCASIONS.map((key) => (
+                  <label key={key} className="choice !rounded-2xl !px-3 !py-2">
+                    <input
+                      type="radio"
+                      name="occasion-choice"
+                      checked={occasion === key}
+                      onChange={() => setOccasion(key)}
+                    />
+                    <span className="flex items-center gap-2 text-[0.9375rem] font-semibold">
+                      <span aria-hidden="true">{OCCASIONS[key].emoji}</span>
+                      {OCCASIONS[key].label}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
           </section>
 
           <section hidden={step !== 1}>
@@ -103,7 +148,7 @@ export function CreateWizard() {
                   name="name"
                   className="input"
                   maxLength={60}
-                  placeholder="Ex.: Natal dos Oliveira"
+                  placeholder="Ex.: Amigo secreto dos Oliveira"
                   aria-invalid={nameError}
                   aria-describedby={nameError ? "name-error" : undefined}
                 />
@@ -123,9 +168,10 @@ export function CreateWizard() {
                   className="input"
                   maxLength={40}
                   autoComplete="given-name"
+                  defaultValue={organizerName}
                 />
                 <p className="hint mt-1">
-                  Deixe em branco se você só organiza e não entra no sorteio.
+                  É como você aparece no sorteio. Deixe em branco se só organiza e não participa.
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -133,13 +179,13 @@ export function CreateWizard() {
                   <label className="label" htmlFor="eventDate">
                     Dia da troca
                   </label>
-                  <input id="eventDate" name="eventDate" type="date" className="input" />
+                  <DateField id="eventDate" name="eventDate" />
                 </div>
                 <div>
                   <label className="label" htmlFor="eventTime">
                     Hora
                   </label>
-                  <input id="eventTime" name="eventTime" type="time" className="input" />
+                  <TimeField id="eventTime" name="eventTime" />
                 </div>
               </div>
               <div>

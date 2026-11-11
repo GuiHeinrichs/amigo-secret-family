@@ -1,17 +1,15 @@
 import { expect, test, type Page } from "@playwright/test";
-import { addPeople, createGroup, draw, newPhone, openSlip, personalLink } from "./helpers";
+import { addPeople, claimPhone, createGroup, draw, newPhone, openSlip, testEmail } from "./helpers";
 
 test("amigo ladrão: fila, abrir, roubar, trancar e fim de jogo", async ({ browser }) => {
-  const admin = await newPhone(browser);
+  const admin = await newPhone(browser, testEmail("org"));
   const slug = await createGroup(admin, { name: "Ladrão de Teste", mode: "Amigo Ladrão" });
   const names = ["Lia", "Max", "Nina"];
   await addPeople(admin, names);
 
   const phones: Record<string, Page> = {};
-  for (const name of names) {
-    phones[name] = await newPhone(browser);
-    await phones[name].goto(await personalLink(admin, name));
-  }
+  for (const name of names) phones[name] = await claimPhone(browser, admin, name);
+  await admin.reload();
   await draw(admin);
 
   // Cada um vê a própria posição; juntas formam 1º, 2º e 3º.
@@ -28,7 +26,7 @@ test("amigo ladrão: fila, abrir, roubar, trancar e fim de jogo", async ({ brows
   // Fora da vez não aparece nenhum botão de jogada.
   await phones[second].goto(`/g/${slug}/festa`);
   await expect(phones[second].getByRole("heading", { name: `Vez de ${first}` })).toBeVisible();
-  await expect(phones[second].getByRole("button", { name: /^Abrir/ })).toHaveCount(0);
+  await expect(phones[second].getByRole("button", { name: /^Abrir o presente/ })).toHaveCount(0);
 
   // 1º abre o presente 1 e diz o que é.
   const p1 = phones[first];
