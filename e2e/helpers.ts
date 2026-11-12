@@ -82,7 +82,8 @@ export async function claimPhone(browser: Browser, admin: Page, name: string): P
 }
 
 export async function draw(admin: Page) {
-  await admin.getByRole("button", { name: "Sortear agora" }).click();
+  // Clássico e Onça: "Sortear tudo agora"; Amigo Ladrão: "Sortear agora".
+  await admin.getByRole("button", { name: /^Sortear (tudo )?agora$/ }).click();
   await expect(admin.getByRole("heading", { name: "Sorteio feito" })).toBeVisible();
 }
 

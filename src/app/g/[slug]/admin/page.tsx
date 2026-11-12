@@ -10,8 +10,8 @@ import { Avatar, FrameSkeleton, GroupFrame, loadCtx } from "@/components/frame";
 import { Icon, WhatsAppIcon } from "@/components/icons";
 import { MIN_PARTICIPANTS } from "@/lib/draw";
 import { formatDateTime, plural, whatsappUrl } from "@/lib/format";
-import { MODE_KEYS, MODES, OCCASION_KEYS, OCCASIONS } from "@/lib/occasions";
-import { resetDraw, runDraw } from "@/server/actions/draw";
+import { MODE_KEYS, MODES, modeOf, OCCASION_KEYS, OCCASIONS } from "@/lib/occasions";
+import { completeSelfDraw, openSelfDraw, resetDraw, runDraw } from "@/server/actions/draw";
 import { deleteGroup, newEdition, updateGroup } from "@/server/actions/group";
 import { adoptParticipant } from "@/server/actions/account";
 import {
@@ -44,6 +44,9 @@ async function Content({ params }: { params: PageProps<"/g/[slug]/admin">["param
   const fields = { slug };
   const ladrao = group.mode === "ladrao";
   const building = group.status === "montando";
+  // Sorteio individual aberto: quem já abriu o papelzinho é quem já sorteou.
+  const drawing = group.status === "sorteando";
+  const friend = modeOf(group.mode).friend;
   const people = await listPeople(group.id);
   const counts = await wishCounts(people.map((p) => p.id));
   const rules = building && !ladrao ? await listExclusions(group.id) : [];
@@ -52,6 +55,8 @@ async function Content({ params }: { params: PageProps<"/g/[slug]/admin">["param
   const inviteLink = `${origin}/g/${slug}`;
   const qr = building ? await QRCode.toString(inviteLink, { type: "svg", margin: 1 }) : "";
   const opened = people.filter((p) => p.openedAt).length;
+  const waiting = people.filter((p) => !p.openedAt);
+  const enough = people.length >= MIN_PARTICIPANTS;
   const nameOf = (id: string) => people.find((p) => p.id === id)?.name ?? "alguém";
 
   return (
@@ -71,11 +76,76 @@ async function Content({ params }: { params: PageProps<"/g/[slug]/admin">["param
                   ? "O sorteio define a ordem em que cada um escolhe o presente."
                   : "Depois do sorteio, nem você consegue ver quem tirou quem."}
             </p>
-            <ActionForm action={runDraw} fields={fields} className="mt-4">
-              <SubmitButton pendingLabel="Sorteando…" disabled={people.length < MIN_PARTICIPANTS}>
-                Sortear agora
-              </SubmitButton>
-            </ActionForm>
+            {ladrao ? (
+              <ActionForm action={runDraw} fields={fields} className="mt-4">
+                <SubmitButton pendingLabel="Sorteando…" disabled={!enough}>
+                  Sortear agora
+                </SubmitButton>
+              </ActionForm>
+            ) : (
+              <div className="mt-4 grid gap-5 sm:grid-cols-2">
+                <ActionForm action={runDraw} fields={fields}>
+                  <SubmitButton pendingLabel="Sorteando…" disabled={!enough}>
+                    Sortear tudo agora
+                  </SubmitButton>
+                  <p className="hint mt-2">
+                    O app sorteia todo mundo de uma vez e cada pessoa recebe o papelzinho lacrado.
+                  </p>
+                </ActionForm>
+                <ActionForm action={openSelfDraw} fields={fields}>
+                  <SubmitButton
+                    className="btn btn-quiet"
+                    pendingLabel="Liberando…"
+                    disabled={!enough}
+                  >
+                    Liberar para cada um sortear
+                  </SubmitButton>
+                  <p className="hint mt-2">
+                    Cada pessoa, inclusive você, toca num botão e sorteia o próprio {friend}, como
+                    tirar o papel do chapéu.
+                  </p>
+                </ActionForm>
+              </div>
+            )}
+          </>
+        )}
+
+        {drawing && (
+          <>
+            <h2 className="text-xl">Sorteio aberto</h2>
+            <p className="mt-1 text-ink-soft">
+              {opened} de {plural(people.length, "pessoa já sorteou", "pessoas já sortearam")}.{" "}
+              {waiting.length > 0 && `Falta: ${waiting.map((p) => p.name).join(", ")}.`}
+            </p>
+            <div className="mt-4 flex flex-wrap items-start gap-3">
+              {ctx.me && !ctx.me.openedAt && (
+                <Link href={`/g/${slug}/revelar`} className="btn btn-primary">
+                  Sortear meu {friend}
+                </Link>
+              )}
+              <ActionForm action={completeSelfDraw} fields={fields} toastNote>
+                <ConfirmSubmit
+                  className="btn btn-quiet"
+                  confirmLabel={`Sortear por ${plural(waiting.length, "pessoa", "pessoas")}?`}
+                >
+                  Sortear por quem falta
+                </ConfirmSubmit>
+              </ActionForm>
+            </div>
+            <p className="hint mt-2">
+              Quem não sortear recebe o papelzinho lacrado, para abrir quando entrar. Você continua
+              sem ver quem tirou quem.
+            </p>
+            <details className="mt-4">
+              <summary className="cursor-pointer font-semibold">Cancelar o sorteio</summary>
+              <p className="hint mt-2">
+                Os papelzinhos já sorteados são apagados e o grupo volta a aceitar gente nova e
+                mudanças nas restrições.
+              </p>
+              <ActionForm action={resetDraw} fields={fields} className="mt-3">
+                <ConfirmSubmit confirmLabel="Cancelar mesmo?">Cancelar o sorteio</ConfirmSubmit>
+              </ActionForm>
+            </details>
           </>
         )}
 
@@ -162,7 +232,9 @@ async function Content({ params }: { params: PageProps<"/g/[slug]/admin">["param
             const link = claimed ? inviteLink : `${origin}/k/${p.token}`;
             const message = !claimed
               ? `Oi, ${p.name}! Você está no amigo secreto "${group.name}". Entre por este convite, que é só seu: ${link}`
-              : `Oi, ${p.name}! O sorteio do "${group.name}" já saiu. Abra o seu papelzinho: ${link}`;
+              : drawing
+                ? `Oi, ${p.name}! O sorteio do "${group.name}" está aberto. Entre e sorteie o seu ${friend}: ${link}`
+                : `Oi, ${p.name}! O sorteio do "${group.name}" já saiu. Abra o seu papelzinho: ${link}`;
             const account = !claimed
               ? "Ainda não entrou"
               : p.userId === ctx.user?.id
@@ -182,9 +254,11 @@ async function Content({ params }: { params: PageProps<"/g/[slug]/admin">["param
                           ? ""
                           : `, lista com ${plural(wishes, "item", "itens")}`
                         : p.openedAt
-                          ? `, abriu em ${formatDateTime(p.openedAt)}`
+                          ? `, ${drawing ? "sorteou" : "abriu"} em ${formatDateTime(p.openedAt)}`
                           : claimed
-                            ? ", ainda não abriu"
+                            ? drawing
+                              ? ", ainda não sorteou"
+                              : ", ainda não abriu"
                             : ""}
                     </p>
                   </div>
@@ -270,6 +344,12 @@ async function Content({ params }: { params: PageProps<"/g/[slug]/admin">["param
               Incluir
             </SubmitButton>
           </ActionForm>
+        )}
+        {drawing && (
+          <p className="hint mt-4">
+            Se alguém desistir, é só tirar: quem tinha tirado essa pessoa sorteia de novo e ninguém
+            mais muda.
+          </p>
         )}
         {group.status === "sorteado" && !ladrao && (
           <p className="hint mt-4">

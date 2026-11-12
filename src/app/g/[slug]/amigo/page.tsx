@@ -70,10 +70,16 @@ async function Content({ params }: { params: PageProps<"/g/[slug]/amigo">["param
         </dl>
       )}
 
-      <Link href={`${base}/chat/amigo`} className="btn btn-primary mt-6">
-        <Icon name="chat" size={20} />
-        Perguntar sem se revelar
-      </Link>
+      {group.status === "sorteando" ? (
+        <p className="notice mt-6">
+          A conversa anônima com {friend.name} abre quando todo mundo tiver sorteado.
+        </p>
+      ) : (
+        <Link href={`${base}/chat/amigo`} className="btn btn-primary mt-6">
+          <Icon name="chat" size={20} />
+          Perguntar sem se revelar
+        </Link>
+      )}
 
       <hr className="cutline" />
 

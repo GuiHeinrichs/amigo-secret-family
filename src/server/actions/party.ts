@@ -31,7 +31,7 @@ export async function saveGuess(
 ): Promise<ActionState> {
   return run(async () => {
     const { group, me } = await requireMember(form.get("slug"));
-    if (group.mode === "ladrao" || group.status === "montando") {
+    if (group.mode === "ladrao" || group.status === "montando" || group.status === "sorteando") {
       throw new ActionError("Ainda não dá para palpitar.");
     }
     const db = await getDb();
@@ -65,7 +65,9 @@ export async function startParty(
       throw new ActionError(
         group.status === "montando"
           ? "Faça o sorteio antes de começar a festa."
-          : "A festa já começou.",
+          : group.status === "sorteando"
+            ? "Ainda falta gente sortear. Espere todo mundo ou use “Sortear por quem falta”."
+            : "A festa já começou.",
       );
     }
     const db = await getDb();

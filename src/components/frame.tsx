@@ -47,6 +47,8 @@ async function navItems(ctx: Ctx): Promise<NavItem[]> {
   if (!me) return [];
   const base = `/g/${group.slug}`;
   const ladrao = group.mode === "ladrao";
+  // Sorteio individual aberto: ainda há gente sem par, então nada de conversas ou festa.
+  const drawing = group.status === "sorteando";
   const items: NavItem[] = [{ key: "inicio", href: base, label: "Início", icon: "home" }];
 
   if (group.status !== "montando") {
@@ -55,13 +57,18 @@ async function navItems(ctx: Ctx): Promise<NavItem[]> {
         ? { key: "papelzinho", href: `${base}/revelar`, label: "Minha vez", icon: "slip" }
         : me.openedAt
           ? { key: "papelzinho", href: `${base}/amigo`, label: "Meu amigo", icon: "slip" }
-          : { key: "papelzinho", href: `${base}/revelar`, label: "Papelzinho", icon: "slip" },
+          : {
+              key: "papelzinho",
+              href: `${base}/revelar`,
+              label: drawing ? "Sortear" : "Papelzinho",
+              icon: "slip",
+            },
     );
   }
   if (!ladrao) {
     items.push({ key: "lista", href: `${base}/lista`, label: "Minha lista", icon: "list" });
   }
-  if (group.status !== "montando") {
+  if (group.status !== "montando" && !drawing) {
     if (!ladrao) {
       const unread = (await unreadCount(me, "amigo")) + (await unreadCount(me, "misterio"));
       items.push({

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  completeDraw,
   draw,
+  drawOne,
   isSingleCycle,
   nextGiver,
   shuffle,
@@ -188,5 +190,120 @@ describe("shuffle", () => {
   it("mantém os mesmos elementos", () => {
     const ids = people(20);
     expect(shuffle(ids, seeded(9)).sort()).toEqual([...ids].sort());
+  });
+});
+
+describe("sorteio individual", () => {
+  /** Simula todo mundo sorteando, um por vez, na ordem dada. */
+  function everyoneDraws(
+    ids: string[],
+    order: string[],
+    options: { forbidden?: Pair[]; soft?: Pair[]; rng: () => number },
+  ) {
+    const taken: Record<string, string> = {};
+    for (const giver of order) {
+      const result = drawOne({ ids, taken, giver, ...options });
+      if (!result.ok) throw new Error(`${giver} ficou sem opção (${result.reason})`);
+      taken[giver] = result.receiver;
+    }
+    return taken;
+  }
+
+  it("não deixa a última pessoa sobrar com o próprio nome", () => {
+    // Com três pessoas, se A tirou B, B não pode tirar A: C ficaria com C.
+    for (let seed = 1; seed <= 200; seed++) {
+      const result = drawOne({
+        ids: ["a", "b", "c"],
+        taken: { a: "b" },
+        giver: "b",
+        rng: seeded(seed),
+      });
+      expect(result).toEqual({ ok: true, receiver: "c" });
+    }
+  });
+
+  it("sempre termina num sorteio válido, em qualquer ordem e tamanho", () => {
+    for (const n of [3, 4, 5, 7, 10, 16]) {
+      for (let seed = 1; seed <= 40; seed++) {
+        const rng = seeded(seed * 131 + n);
+        const ids = people(n);
+        const taken = everyoneDraws(ids, shuffle(ids, rng), { rng });
+        expectValid(ids, taken);
+      }
+    }
+  });
+
+  it("respeita as restrições mesmo sorteando um por vez", () => {
+    const ids = people(8);
+    const forbidden: Pair[] = [
+      ["p0", "p1"], ["p1", "p0"],
+      ["p2", "p3"], ["p3", "p2"],
+      ["p4", "p5"], ["p5", "p4"],
+      ["p6", "p0"], ["p6", "p1"], ["p6", "p2"],
+    ];
+    for (let seed = 1; seed <= 80; seed++) {
+      const rng = seeded(seed);
+      const taken = everyoneDraws(ids, shuffle(ids, rng), { forbidden, rng });
+      expectValid(ids, taken, forbidden);
+    }
+  });
+
+  it("evita os pares indesejados quando há alternativa", () => {
+    const ids = people(6);
+    const soft: Pair[] = [["p0", "p1"], ["p0", "p2"], ["p0", "p3"]];
+    for (let seed = 1; seed <= 60; seed++) {
+      const result = drawOne({ ids, taken: {}, giver: "p0", soft, rng: seeded(seed) });
+      expect(result.ok && ["p4", "p5"].includes(result.receiver)).toBe(true);
+    }
+  });
+
+  it("cede no par indesejado quando ele é a única saída", () => {
+    const result = drawOne({
+      ids: ["a", "b", "c"],
+      taken: { a: "b" },
+      giver: "b",
+      soft: [["b", "c"]],
+      rng: seeded(4),
+    });
+    expect(result).toEqual({ ok: true, receiver: "c" });
+  });
+
+  it("avisa quando a pessoa já sorteou ou quando não há saída", () => {
+    const ids = ["a", "b", "c"];
+    expect(drawOne({ ids, taken: { a: "b" }, giver: "a", rng: seeded(1) })).toEqual({
+      ok: false,
+      reason: "ja-sorteou",
+    });
+    expect(
+      drawOne({ ids, taken: {}, giver: "a", forbidden: [["a", "b"], ["a", "c"]], rng: seeded(1) }),
+    ).toEqual({ ok: false, reason: "impossivel" });
+  });
+
+  it("completa o sorteio de quem falta sem mexer no que já foi tirado", () => {
+    const ids = people(7);
+    for (let seed = 1; seed <= 60; seed++) {
+      const rng = seeded(seed);
+      const order = shuffle(ids, rng);
+      const taken = everyoneDraws(ids, order.slice(0, 3), { rng });
+      const rest = completeDraw({ ids, taken, rng });
+      expect(rest.ok).toBe(true);
+      if (!rest.ok) continue;
+      expect(Object.keys(rest.pairs).sort()).toEqual(order.slice(3).sort());
+      expectValid(ids, { ...taken, ...rest.pairs });
+    }
+  });
+
+  it("completar respeita restrições e evita pares indesejados quando dá", () => {
+    const ids = people(5);
+    // p3 só pode tirar p4; p2 deve evitar p0, e há como: p4 tira p0 e p2 tira p3.
+    const forbidden: Pair[] = [["p3", "p0"]];
+    const soft: Pair[] = [["p2", "p0"]];
+    for (let seed = 1; seed <= 40; seed++) {
+      const rest = completeDraw({ ids, taken: { p0: "p1", p1: "p2" }, forbidden, soft, rng: seeded(seed) });
+      expect(rest.ok).toBe(true);
+      if (!rest.ok) continue;
+      const all = { p0: "p1", p1: "p2", ...rest.pairs };
+      expectValid(ids, all, [...forbidden, ...soft]);
+    }
   });
 });

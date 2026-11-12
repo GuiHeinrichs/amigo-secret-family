@@ -12,6 +12,7 @@ import { getUser } from "@/server/session";
 
 const STATUS_LABEL: Record<string, string> = {
   montando: "Esperando o sorteio",
+  sorteando: "Sorteio aberto",
   sorteado: "Sorteio feito",
   festa: "Em festa",
   encerrado: "Encerrado",

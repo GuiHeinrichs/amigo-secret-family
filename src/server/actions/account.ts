@@ -79,7 +79,11 @@ export async function addDependent(
       throw new ActionError("Entre você no sorteio antes de incluir outra pessoa.");
     }
     if (ctx.group.status !== "montando") {
-      throw new ActionError("Depois do sorteio não dá para incluir gente nova.");
+      throw new ActionError(
+        ctx.group.status === "sorteando"
+          ? "Com o sorteio liberado não dá para incluir gente nova."
+          : "Depois do sorteio não dá para incluir gente nova.",
+      );
     }
     const name = text(form, "name", 40);
     if (name.length < 2) throw new ActionError("Escreva o nome da pessoa.");

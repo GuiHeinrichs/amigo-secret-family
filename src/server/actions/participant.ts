@@ -3,18 +3,20 @@
 import { and, eq } from "drizzle-orm";
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
-import { stitch, type Pair } from "@/lib/draw";
+import { completeDraw, MIN_PARTICIPANTS, stitch, type Pair } from "@/lib/draw";
 import { AVATAR_COLORS, AVATAR_EMOJIS } from "@/lib/occasions";
 import { clientIp } from "../context";
 import { getDb } from "../db/client";
 import {
   assignments,
   exclusions,
+  groups,
   messages,
   participants,
   themes,
   users,
 } from "../db/schema";
+import { loadDrawRules } from "../draw-rules";
 import {
   ActionError,
   optional,
@@ -64,7 +66,9 @@ export async function joinGroup(
     if (ctx.me) return;
     if (ctx.group.status !== "montando") {
       throw new ActionError(
-        "O sorteio deste grupo já aconteceu. Peça a quem organiza o convite com o seu nome.",
+        ctx.group.status === "sorteando"
+          ? "O sorteio deste grupo já foi liberado. Peça a quem organiza o convite com o seu nome."
+          : "O sorteio deste grupo já aconteceu. Peça a quem organiza o convite com o seu nome.",
       );
     }
     if (!(await rateLimit(`entrar:${user.id}:${await clientIp()}`, 30, 3600))) {
@@ -108,7 +112,11 @@ export async function addParticipants(
   return run(async () => {
     const { group } = await requireAdmin(form.get("slug"));
     if (group.status !== "montando") {
-      throw new ActionError("Depois do sorteio não dá para incluir gente nova. Refaça o sorteio para incluir.");
+      throw new ActionError(
+        group.status === "sorteando"
+          ? "Com o sorteio liberado não dá para incluir gente nova. Cancele o sorteio para incluir."
+          : "Depois do sorteio não dá para incluir gente nova. Refaça o sorteio para incluir.",
+      );
     }
     const names = text(form, "names", 4000)
       .split(/[\n,;]+/)
@@ -196,6 +204,60 @@ export async function removeParticipant(
       });
       refresh();
       return { ok: true, note: `${person.name} saiu do grupo.` };
+    }
+
+    if (group.status === "sorteando") {
+      // Sorteio individual em andamento: quem tinha tirado essa pessoa volta a
+      // ficar sem par e sorteia de novo; ninguém mais é afetado.
+      const orphan = await db.transaction(async (tx) => {
+        await tx.select().from(groups).where(eq(groups.id, group.id)).for("update");
+        const before = await tx
+          .select()
+          .from(assignments)
+          .where(eq(assignments.groupId, group.id));
+        const orphanId = before.find((a) => a.receiverId === id)?.giverId ?? null;
+        // Apagar a pessoa leva junto o par dela e o par de quem tirou ela.
+        await tx.delete(participants).where(eq(participants.id, id));
+        if (orphanId) {
+          await tx.update(participants).set({ openedAt: null }).where(eq(participants.id, orphanId));
+        }
+        const rest = await tx
+          .select()
+          .from(participants)
+          .where(eq(participants.groupId, group.id));
+        if (rest.length < MIN_PARTICIPANTS) {
+          throw new ActionError(
+            `Sem ${person.name} sobrariam menos de ${MIN_PARTICIPANTS} pessoas. Cancele o sorteio para remover.`,
+          );
+        }
+        const pairs = (
+          await tx.select().from(assignments).where(eq(assignments.groupId, group.id))
+        ).map((a) => [a.giverId, a.receiverId] as const);
+        const check = completeDraw({
+          ids: rest.map((p) => p.id),
+          taken: Object.fromEntries(pairs),
+          forbidden: (await loadDrawRules(tx, group.id, rest)).forbidden,
+        });
+        if (!check.ok) {
+          throw new ActionError(
+            `Sem ${person.name} o sorteio de quem falta não fecha. Cancele o sorteio para remover.`,
+          );
+        }
+        if (pairs.length === rest.length) {
+          await tx
+            .update(groups)
+            .set({ status: "sorteado", drawnAt: new Date() })
+            .where(eq(groups.id, group.id));
+        }
+        return rest.find((p) => p.id === orphanId) ?? null;
+      });
+      refresh();
+      return {
+        ok: true,
+        note: orphan
+          ? `${person.name} saiu. ${orphan.name} tinha tirado essa pessoa e vai sortear de novo.`
+          : `${person.name} saiu do grupo.`,
+      };
     }
 
     // Sorteio já feito: costura o ciclo em vez de refazer tudo.

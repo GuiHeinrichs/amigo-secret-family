@@ -12,11 +12,14 @@ const HOLD_MS = 900;
 export function Reveal({
   slug,
   alreadyOpened,
+  pendingDraw = false,
   friendLabel,
 }: {
   slug: string;
   /** O lacre já tinha sido rompido antes desta visita. */
   alreadyOpened: boolean;
+  /** Sorteio individual: romper o selo também sorteia o par desta pessoa. */
+  pendingDraw?: boolean;
   /** "amigo secreto" / "amigo da onça" */
   friendLabel: string;
 }) {
@@ -30,6 +33,8 @@ export function Reveal({
   const celebrated = useRef(false);
   const root = useRef<HTMLDivElement>(null);
   const needsHold = !alreadyOpened && !result;
+  // Só vale enquanto o papelzinho ainda não saiu do servidor.
+  const drawing = pendingDraw && !result;
 
   useEffect(() => () => void (timer.current && clearTimeout(timer.current)), []);
 
@@ -51,7 +56,11 @@ export function Reveal({
         setTimeout(() => celebrate(root.current), 700);
       }
     } catch {
-      setError("Não deu para abrir agora. Confira a internet e tente de novo.");
+      setError(
+        drawing
+          ? "Não deu para sortear agora. Confira a internet e tente de novo."
+          : "Não deu para abrir agora. Confira a internet e tente de novo.",
+      );
     } finally {
       setBusy(false);
     }
@@ -75,13 +84,15 @@ export function Reveal({
 
   return (
     <div ref={root} className="flex flex-col items-center text-center">
-      <h1 className="text-3xl">Seu papelzinho</h1>
+      <h1 className="text-3xl">{drawing ? `Sortear meu ${friendLabel}` : "Seu papelzinho"}</h1>
       <p className="hint mt-2 max-w-xs" aria-live="polite">
         {open
           ? "Guarde segredo até o dia da festa."
-          : needsHold
-            ? "Confira se ninguém está olhando. Depois, segure o selo até ele romper."
-            : "Você já abriu este papelzinho. Toque no selo para ver de novo."}
+          : drawing
+            ? "Confira se ninguém está olhando. Depois, segure o selo: o sorteio acontece na hora e o nome aparece só para você."
+            : needsHold
+              ? "Confira se ninguém está olhando. Depois, segure o selo até ele romper."
+              : "Você já abriu este papelzinho. Toque no selo para ver de novo."}
       </p>
 
       <div className="mt-6" style={{ "--hold-ms": `${HOLD_MS}ms` } as React.CSSProperties}>
@@ -124,9 +135,11 @@ export function Reveal({
                 data-holding={holding}
                 disabled={busy}
                 aria-label={
-                  needsHold
-                    ? "Romper o selo e abrir o papelzinho. Segure, ou pressione Enter."
-                    : "Abrir o papelzinho de novo"
+                  drawing
+                    ? `Sortear meu ${friendLabel} e abrir o papelzinho. Segure, ou pressione Enter.`
+                    : needsHold
+                      ? "Romper o selo e abrir o papelzinho. Segure, ou pressione Enter."
+                      : "Abrir o papelzinho de novo"
                 }
                 onPointerDown={startHold}
                 onPointerUp={cancelHold}
@@ -163,9 +176,11 @@ export function Reveal({
         {open && result && (
           <div className="pop-in grid gap-3">
             <p className={`notice ${result.firstOpen ? "notice-ok" : ""}`} role="status">
-              {result.firstOpen
-                ? "Lacre rompido agora. Só você viu este papelzinho."
-                : `Este papelzinho foi aberto pela primeira vez em ${formatDateTime(result.openedAt)}. Se não foi você, avise quem organiza.`}
+              {result.kind === "amigo" && result.drawnNow
+                ? "Sorteado agora, só para você. Ninguém mais viu este papelzinho."
+                : result.firstOpen
+                  ? "Lacre rompido agora. Só você viu este papelzinho."
+                  : `Este papelzinho foi aberto pela primeira vez em ${formatDateTime(result.openedAt)}. Se não foi você, avise quem organiza.`}
             </p>
             {result.kind === "amigo" ? (
               <Link href={`/g/${slug}/amigo`} className="btn btn-primary btn-block">

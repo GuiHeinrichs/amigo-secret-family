@@ -7,6 +7,7 @@ Web app de amigo secreto para famílias e grupos de amigos. Quem organiza monta 
 - **Conta sem senha.** A pessoa entra com o Google. O login por e-mail com código de 6 dígitos continua no código e aparece quando há um remetente próprio configurado (`EMAIL_FROM`) ou no desenvolvimento local. Grupos, listas e papelzinhos ficam na conta e aparecem em qualquer aparelho.
 - **Crianças e quem não tem e-mail.** Uma conta pode cuidar de várias pessoas no mesmo grupo: o responsável inclui a criança, troca de perfil e abre o papelzinho dela. Quem organiza também pode assumir um nome que incluiu. O sorteio evita, quando dá, que pessoas da mesma conta se tirem.
 - **Convites.** Link do grupo (a pessoa entra e escolhe o nome) ou convite pessoal para um nome já incluído, que vale uma única vez.
+- **Dois jeitos de sortear.** Quem organiza sorteia todo mundo de uma vez ou libera para cada pessoa sortear o próprio amigo, como tirar o papel do chapéu. No sorteio individual o app só oferece nomes que ainda deixam o sorteio dos demais possível, então ninguém sobra com o próprio nome; quem organiza vê quem falta e pode sortear por essas pessoas.
 - **Sorteio com restrições.** "Casal não se tira", pares da edição anterior evitados quando possível, e preferência por um ciclo único para a revelação em cadeia da festa.
 - **Lacre.** Nem quem organiza vê os pares. A primeira abertura de cada papelzinho fica registrada: se alguém espiou antes, o dono fica sabendo quando.
 - **Lista de desejos e perfil** (tamanhos, gostos), visíveis só para quem tirou a pessoa.

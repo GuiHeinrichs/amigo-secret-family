@@ -59,6 +59,7 @@ async function Invitation({
   const { group, user } = ctx;
   const mode = modeOf(group.mode);
   const open = group.status === "montando";
+  const drawing = group.status === "sorteando";
 
   return (
     <GroupFrame ctx={ctx}>
@@ -68,12 +69,18 @@ async function Invitation({
         </p>
       )}
       <h1 className="text-4xl">
-        {open ? "Você foi chamado para o sorteio" : "O sorteio já aconteceu"}
+        {open
+          ? "Você foi chamado para o sorteio"
+          : drawing
+            ? "O sorteio já foi liberado"
+            : "O sorteio já aconteceu"}
       </h1>
       <p className="mt-3 text-ink-soft">
         {open
           ? `${group.name} vai ser no modo ${mode.label}. ${mode.description}`
-          : "Se quem organiza incluiu o seu nome, peça o convite pessoal para ver o seu papelzinho."}
+          : drawing
+            ? "Se quem organiza incluiu o seu nome, peça o convite pessoal para sortear o seu amigo."
+            : "Se quem organiza incluiu o seu nome, peça o convite pessoal para ver o seu papelzinho."}
       </p>
 
       {people.length > 0 && (
@@ -148,6 +155,12 @@ async function MemberHome({
   const { group } = ctx;
   const base = `/g/${group.slug}`;
   const ladrao = group.mode === "ladrao";
+  const mode = modeOf(group.mode);
+  // Sorteio individual aberto: quem já abriu o papelzinho é quem já sorteou.
+  const drawing = group.status === "sorteando";
+  const drawn = people.filter((p) => p.openedAt).length;
+  const progress = `${drawn} de ${plural(people.length, "pessoa já sorteou", "pessoas já sortearam")}.`;
+  const othersToDraw = ctx.profiles.filter((p) => p.id !== me.id && !p.openedAt);
   const counts = await wishCounts(people.map((p) => p.id));
   const origin = await getOrigin();
   const inviteText = `Entra no nosso amigo secreto "${group.name}": ${origin}${base}`;
@@ -187,6 +200,43 @@ async function MemberHome({
               </a>
             </div>
           </>
+        )}
+
+        {drawing && !me.openedAt && (
+          <>
+            <h2 className="text-xl">O sorteio está aberto</h2>
+            <p className="mt-1 text-ink-soft">
+              Desta vez cada pessoa sorteia o próprio {mode.friend}, como tirar o papel do chapéu.
+              Ninguém vê quem você tirou, nem quem organiza. {progress}
+            </p>
+            <Link href={`${base}/revelar`} className="btn btn-primary mt-4">
+              Sortear meu {mode.friend}
+            </Link>
+          </>
+        )}
+
+        {drawing && me.openedAt && (
+          <>
+            <h2 className="text-xl">Você já sorteou</h2>
+            <p className="mt-1 text-ink-soft">
+              {progress} As conversas e os palpites abrem quando todo mundo tiver sorteado.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Link href={`${base}/amigo`} className="btn btn-primary">
+                Ver meu amigo
+              </Link>
+              <Link href={`${base}/lista`} className="btn btn-quiet">
+                {counts.get(me.id) ? "Ver minha lista" : "Preencher minha lista"}
+              </Link>
+            </div>
+          </>
+        )}
+
+        {drawing && othersToDraw.length > 0 && (
+          <p className="notice mt-4">
+            Falta sortear por {othersToDraw.map((p) => p.name).join(", ")}. Troque de perfil no topo
+            da página para sortear por {othersToDraw.length === 1 ? "essa pessoa" : "cada uma"}.
+          </p>
         )}
 
         {group.status === "sorteado" && !me.openedAt && (
@@ -262,7 +312,9 @@ async function MemberHome({
                 {p.name}
                 {p.id === me.id && <span className="hint font-normal"> (você)</span>}
               </span>
-              {!ladrao && !!counts.get(p.id) && <span className="chip chip-on">Lista pronta</span>}
+              {drawing
+                ? p.openedAt && <span className="chip chip-on">Já sorteou</span>
+                : !ladrao && !!counts.get(p.id) && <span className="chip chip-on">Lista pronta</span>}
             </li>
           ))}
         </ul>

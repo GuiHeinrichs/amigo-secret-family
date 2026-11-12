@@ -17,8 +17,18 @@ export function isChatSide(value: unknown): value is ChatSide {
   return value === "amigo" || value === "misterio";
 }
 
+/**
+ * As conversas só abrem com o sorteio completo. Com o sorteio individual ainda
+ * aberto, uma mensagem chegando diria "alguém já tirou você", e cruzando isso
+ * com a lista de quem já sorteou daria para adivinhar quem foi.
+ */
 export function chatAvailable(ctx: Ctx): ctx is Ctx & { me: Participant } {
-  return !!ctx.me && ctx.group.mode !== "ladrao" && ctx.group.status !== "montando";
+  return (
+    !!ctx.me &&
+    ctx.group.mode !== "ladrao" &&
+    ctx.group.status !== "montando" &&
+    ctx.group.status !== "sorteando"
+  );
 }
 
 /**

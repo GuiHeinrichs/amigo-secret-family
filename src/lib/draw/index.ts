@@ -105,15 +105,27 @@ function findCycle(
   return null;
 }
 
-/** Emparelhamento perfeito em grafo bipartido (algoritmo de Kuhn). */
-function findMatching(
-  ids: readonly string[],
+/**
+ * Emparelhamento perfeito em grafo bipartido (algoritmo de Kuhn): cada um de
+ * `givers` recebe um nome diferente de `receivers`. Devolve `null` se não
+ * houver como atender todo mundo.
+ */
+function matchSubset(
+  givers: readonly string[],
+  receivers: ReadonlySet<string>,
   allowed: Allowed,
   rng: Rng,
 ): Record<string, string> | null {
+  if (givers.length > receivers.size) return null;
   const giverOf = new Map<string, string>();
   const adjacency = new Map(
-    ids.map((id) => [id, shuffle([...allowed.get(id)!], rng)]),
+    givers.map((id) => [
+      id,
+      shuffle(
+        [...allowed.get(id)!].filter((receiver) => receivers.has(receiver)),
+        rng,
+      ),
+    ]),
   );
 
   const tryAssign = (giver: string, seen: Set<string>): boolean => {
@@ -129,12 +141,16 @@ function findMatching(
     return false;
   };
 
-  for (const giver of shuffle(ids, rng)) {
+  for (const giver of shuffle(givers, rng)) {
     if (!tryAssign(giver, new Set())) return null;
   }
   const pairs: Record<string, string> = {};
   for (const [receiver, giver] of giverOf) pairs[giver] = receiver;
   return pairs;
+}
+
+function findMatching(ids: readonly string[], allowed: Allowed, rng: Rng) {
+  return matchSubset(ids, new Set(ids), allowed, rng);
 }
 
 export function isSingleCycle(pairs: Record<string, string>): boolean {
@@ -236,4 +252,81 @@ export function nextGiver(
   const waiting = Object.keys(pairs).filter((id) => !alreadyGave.has(id));
   if (waiting.length === 0) return null;
   return waiting[Math.floor(rng() * waiting.length)];
+}
+
+/*
+ * ——— Sorteio individual ———
+ *
+ * Em vez de sortear todo mundo de uma vez, cada pessoa sorteia o próprio
+ * amigo quando quiser, como se tirasse um papelzinho do chapéu. O chapéu de
+ * verdade tem um defeito: a última pessoa pode ficar só com o próprio nome.
+ * Aqui isso não acontece, porque a cada sorteio só entram os nomes que ainda
+ * deixam o sorteio dos demais possível.
+ */
+
+export type DrawOneResult =
+  | { ok: true; receiver: string }
+  | { ok: false; reason: "ja-sorteou" | "impossivel" };
+
+type PartialDraw = {
+  ids: readonly string[];
+  /** Pares já sorteados: giver → receiver. */
+  taken: Readonly<Record<string, string>>;
+  forbidden?: readonly Pair[];
+  /** Pares a evitar quando houver alternativa. */
+  soft?: readonly Pair[];
+  rng?: Rng;
+};
+
+function openSeats(ids: readonly string[], taken: Readonly<Record<string, string>>) {
+  const drawn = new Set(Object.values(taken));
+  return {
+    /** Quem ainda não sorteou. */
+    waiting: ids.filter((id) => taken[id] === undefined),
+    /** Quem ainda não foi tirado por ninguém. */
+    free: ids.filter((id) => !drawn.has(id)),
+  };
+}
+
+export function drawOne(options: PartialDraw & { giver: string }): DrawOneResult {
+  const { ids, taken, giver, forbidden = [], soft = [], rng = secureRng } = options;
+  if (taken[giver] !== undefined) return { ok: false, reason: "ja-sorteou" };
+  if (!ids.includes(giver)) return { ok: false, reason: "impossivel" };
+
+  const allowed = buildAllowed(ids, forbidden);
+  const { waiting, free } = openSeats(ids, taken);
+  const others = waiting.filter((id) => id !== giver);
+
+  // Um nome só entra no sorteio se, tirando ele, os outros ainda fecham.
+  const feasible = free.filter((candidate) => {
+    if (!allowed.get(giver)!.has(candidate)) return false;
+    const rest = new Set(free);
+    rest.delete(candidate);
+    return matchSubset(others, rest, allowed, rng) !== null;
+  });
+  if (feasible.length === 0) return { ok: false, reason: "impossivel" };
+
+  const avoid = new Set(soft.filter(([g]) => g === giver).map(([, receiver]) => receiver));
+  const preferred = feasible.filter((candidate) => !avoid.has(candidate));
+  const pool = preferred.length > 0 ? preferred : feasible;
+  return { ok: true, receiver: pool[Math.floor(rng() * pool.length)] };
+}
+
+/**
+ * Sorteia de uma vez todo mundo que ainda falta, sem mexer nos pares já
+ * tirados. Devolve só os pares novos.
+ */
+export function completeDraw(
+  options: PartialDraw,
+): { ok: true; pairs: Record<string, string> } | { ok: false } {
+  const { ids, taken, forbidden = [], soft = [], rng = secureRng } = options;
+  const { waiting, free } = openSeats(ids, taken);
+  const seats = new Set(free);
+
+  if (soft.length > 0) {
+    const strict = matchSubset(waiting, seats, buildAllowed(ids, [...forbidden, ...soft]), rng);
+    if (strict) return { ok: true, pairs: strict };
+  }
+  const pairs = matchSubset(waiting, seats, buildAllowed(ids, forbidden), rng);
+  return pairs ? { ok: true, pairs } : { ok: false };
 }

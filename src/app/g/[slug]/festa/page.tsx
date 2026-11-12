@@ -18,7 +18,9 @@ export default function PartyPage({ params }: PageProps<"/g/[slug]/festa">) {
 async function Content({ params }: { params: PageProps<"/g/[slug]/festa">["params"] }) {
   const ctx = await loadCtx(params);
   const { group } = ctx;
-  if ((!ctx.me && !ctx.isAdmin) || group.status === "montando") redirect(`/g/${group.slug}`);
+  // A festa só existe com o sorteio completo.
+  const pending = group.status === "montando" || group.status === "sorteando";
+  if ((!ctx.me && !ctx.isAdmin) || pending) redirect(`/g/${group.slug}`);
   const state = await getPartyState(ctx);
 
   return (
