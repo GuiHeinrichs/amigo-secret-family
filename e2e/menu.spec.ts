@@ -40,6 +40,28 @@ test("menu lateral no celular: abre, navega, fecha e some em telas grandes", asy
   await phone.mouse.click(20, 400);
   await expect(menu).toBeHidden();
 
+  // Sair pelo menu e voltar ao mesmo grupo: o Next guarda a página escondida
+  // em vez de desmontar, e ela tem que reaparecer com o menu fechado.
+  await phone.goto(`/g/${slug}`);
+  await burger.click();
+  await expect(menu).toBeVisible();
+  await menu.getByRole("link", { name: "Meus grupos" }).click();
+  await expect(phone.getByRole("heading", { name: "Seus grupos" })).toBeVisible();
+  await phone.getByRole("link", { name: /Menu de Teste/ }).click();
+  await expect(phone).toHaveURL(new RegExp(`/g/${slug}$`));
+  await expect(phone.getByRole("heading", { name: "Oi, Zeca" })).toBeVisible();
+  await expect(menu).toBeHidden();
+
+  // O mesmo vale para quem sai com o menu ainda aberto, pelo voltar do aparelho.
+  await burger.click();
+  await expect(menu).toBeVisible();
+  await phone.goBack();
+  await expect(phone.getByRole("heading", { name: "Seus grupos" })).toBeVisible();
+  await phone.goForward();
+  await expect(phone.getByRole("heading", { name: "Oi, Zeca" })).toBeVisible();
+  await expect(menu).toBeHidden();
+  await expect(burger).toBeVisible();
+
   // Em telas grandes não há hambúrguer; "Organizar" volta para o cabeçalho.
   await phone.setViewportSize({ width: 1280, height: 800 });
   await expect(burger).toBeHidden();

@@ -143,13 +143,19 @@ export function MobileMenu({
     };
   }, [open]);
 
-  // Ao sair da página com o menu aberto, devolve a rolagem.
-  useEffect(
-    () => () => {
+  // Ao sair da página, o Next não desmonta o menu: guarda a rota escondida e
+  // só desfaz os efeitos, o que mata a animação de fechar no meio do caminho.
+  // Por isso a saída deixa o menu fechado de vez, senão ele reaparece aberto
+  // (e sem responder ao botão de fechar) quando a pessoa volta para a página.
+  useEffect(() => {
+    const element = root.current;
+    return () => {
       document.body.style.overflow = "";
-    },
-    [],
-  );
+      wasOpen.current = false;
+      if (element) gsap.set(element, { autoAlpha: 0 });
+      setOpen(false);
+    };
+  }, []);
 
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key === "Escape") {
