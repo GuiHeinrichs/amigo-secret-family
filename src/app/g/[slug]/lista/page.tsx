@@ -6,6 +6,7 @@ import { ActionForm, ConfirmSubmit, SubmitButton } from "@/components/client/for
 import { FrameSkeleton, GroupFrame, loadCtx } from "@/components/frame";
 import { Icon } from "@/components/icons";
 import { WishList } from "@/components/wish-list";
+import { plural } from "@/lib/format";
 import { modeOf } from "@/lib/occasions";
 import { updateProfile } from "@/server/actions/participant";
 import { addWish, removeWish } from "@/server/actions/wishlist";
@@ -43,7 +44,15 @@ async function Content({ params }: { params: PageProps<"/g/[slug]/lista">["param
         troca.
       </p>
 
-      <div className="mt-4">
+      <section aria-labelledby="wishes-title" className="mt-6">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 id="wishes-title" className="text-xl">
+            {wishes.length > 0 ? "Já está na lista" : "Ainda sem itens"}
+          </h2>
+          {wishes.length > 0 && (
+            <span className="chip chip-on flex-none">{plural(wishes.length, "item", "itens")}</span>
+          )}
+        </div>
         <WishList
           wishes={wishes}
           empty={mode.wishEmpty}
@@ -56,15 +65,16 @@ async function Content({ params }: { params: PageProps<"/g/[slug]/lista">["param
             </ActionForm>
           )}
         />
-      </div>
+      </section>
 
       <ActionForm
         action={addWish}
         fields={{ slug }}
         resetOnSuccess
         toastNote
-        className="panel mt-5 grid gap-4"
+        className="panel mt-6 grid gap-4"
       >
+        <h2 className="text-xl">Incluir um item</h2>
         <div>
           <label className="label" htmlFor="title">
             Novo item
