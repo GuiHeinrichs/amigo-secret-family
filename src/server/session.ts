@@ -2,6 +2,7 @@ import "server-only";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { jwtVerify, SignJWT } from "jose";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 import { cache } from "react";
 import { getDb } from "./db/client";
 import { groups, participants, users, type User } from "./db/schema";
@@ -48,6 +49,9 @@ async function readToken(name: string): Promise<Record<string, unknown> | null> 
 
 /** Conta logada neste aparelho, ou `null`. */
 export const getUser = cache(async (): Promise<User | null> => {
+  // Deixa explícito que daqui em diante tudo depende da requisição: a
+  // validação do cookie e o banco usam o relógio, o que não pode ser pré-renderizado.
+  await connection();
   const payload = await readToken(SESSION_COOKIE);
   if (typeof payload?.u !== "string") return null;
   const db = await getDb();

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Breadcrumbs } from "@/components/breadcrumbs";
+import { BackButton, Breadcrumbs } from "@/components/breadcrumbs";
 import { Garland } from "@/components/client/effects/garland";
 
 export const metadata: Metadata = {
@@ -21,8 +21,9 @@ export default function PrivacyPage() {
         <Garland />
       </header>
 
-      <main className="mx-auto max-w-2xl px-5 pb-20 pt-8">
-        <h1 className="text-4xl">Política de privacidade</h1>
+      <main className="mx-auto max-w-2xl px-5 pb-20 pt-6">
+        <BackButton href="/" to="o início" />
+        <h1 className="mt-5 text-4xl">Política de privacidade</h1>
         <p className="hint mt-2">Atualizada em 11 de novembro de 2026.</p>
         <p className="mt-5 text-lg text-ink-soft">
           O Laço é um app de amigo secreto, sem fins comerciais e sem anúncios. Ele guarda só o

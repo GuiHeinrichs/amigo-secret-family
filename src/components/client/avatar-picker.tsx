@@ -6,16 +6,18 @@ import { AVATAR_COLORS, AVATAR_EMOJIS } from "@/lib/occasions";
 export function AvatarPicker({
   emoji: initialEmoji = AVATAR_EMOJIS[0],
   color: initialColor = AVATAR_COLORS[0],
+  legend = "Seu bichinho",
 }: {
   emoji?: string;
   color?: string;
+  legend?: string;
 }) {
   const [emoji, setEmoji] = useState(initialEmoji);
   const [color, setColor] = useState(initialColor);
 
   return (
     <fieldset>
-      <legend className="label">Seu bichinho</legend>
+      <legend className="label">{legend}</legend>
       <input type="hidden" name="emoji" value={emoji} />
       <input type="hidden" name="color" value={color} />
       <div className="flex items-center gap-4">

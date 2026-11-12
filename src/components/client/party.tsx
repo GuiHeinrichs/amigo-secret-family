@@ -40,11 +40,17 @@ function Face({ person, size = "" }: { person?: Person; size?: "" | "avatar-lg" 
 }
 
 export function PartyBoard({ slug, initial }: { slug: string; initial: PartyState }) {
-  const { data, mutate } = useSWR(`/api/g/${slug}/festa`, fetcher, {
-    fallbackData: initial,
-    refreshInterval: (latest) =>
-      latest?.phase === "placar" || latest?.phase === "fim" ? 0 : 2000,
-  });
+  // O estado traz o que é do perfil na tela (palpite, vez de jogar); o cache
+  // é separado por perfil para a troca não mostrar o do anterior.
+  const { data, mutate } = useSWR(
+    `/api/g/${slug}/festa?perfil=${initial.meId ?? "organiza"}`,
+    fetcher,
+    {
+      fallbackData: initial,
+      refreshInterval: (latest) =>
+        latest?.phase === "placar" || latest?.phase === "fim" ? 0 : 2000,
+    },
+  );
   const state = data ?? initial;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

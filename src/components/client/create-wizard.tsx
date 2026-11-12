@@ -12,7 +12,7 @@ import {
   type OccasionKey,
 } from "@/lib/occasions";
 import { createGroup } from "@/server/actions/group";
-import { Breadcrumbs } from "../breadcrumbs";
+import { BackButton, Breadcrumbs } from "../breadcrumbs";
 import { DateField, TimeField } from "./date-time";
 import { Garland } from "./effects/garland";
 import { MobileMenu } from "./mobile-menu";
@@ -72,8 +72,13 @@ export function CreateWizard({
         </div>
         <Garland />
       </header>
-      <main className="mx-auto max-w-md px-5 pb-16 pt-8">
-        <p className="hint" aria-live="polite">
+      <main className="mx-auto max-w-md px-5 pb-16 pt-6">
+        {step === 0 ? (
+          <BackButton href="/" to="o início" />
+        ) : (
+          <BackButton onSelect={() => goTo(step - 1)} to={`o passo ${STEPS[step - 1]}`} />
+        )}
+        <p className="hint mt-5" aria-live="polite">
           Passo {step + 1} de {STEPS.length}: {STEPS[step]}
         </p>
 

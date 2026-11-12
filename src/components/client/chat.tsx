@@ -17,16 +17,20 @@ const time = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digi
 
 export function Chat({
   slug,
+  profileId,
   side,
   initial,
   quick,
 }: {
   slug: string;
+  /** Perfil na tela; separa o cache quando a conta cuida de mais de uma pessoa. */
+  profileId: string;
   side: ChatSide;
   initial: ChatThread;
   quick: readonly string[];
 }) {
-  const { data, mutate } = useSWR(`/api/g/${slug}/chat?lado=${side}`, fetcher, {
+  const endpoint = `/api/g/${slug}/chat?lado=${side}&perfil=${profileId}`;
+  const { data, mutate } = useSWR(endpoint, fetcher, {
     fallbackData: initial,
     refreshInterval: 3000,
     revalidateOnFocus: true,
@@ -59,7 +63,7 @@ export function Chat({
         async () => {
           const result = await sendMessage(slug, side, clean);
           if (result.error) throw new Error(result.error);
-          return fetcher(`/api/g/${slug}/chat?lado=${side}`);
+          return fetcher(endpoint);
         },
         { optimisticData: optimistic, rollbackOnError: true, revalidate: false },
       );

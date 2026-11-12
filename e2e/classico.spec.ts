@@ -46,6 +46,51 @@ test("fluxo clássico com contas: convite, dependente, sorteio, lacre, chat, lis
   await expect(phones.Duda.getByText("Pedrinho entrou no sorteio")).toBeVisible();
   phones.Pedrinho = phones.Duda;
 
+  // Lista e perfil da Duda: cada salvamento mostra um aviso de sucesso.
+  const duda = phones.Duda;
+  const sections = duda.getByRole("navigation", { name: "Seções do grupo" });
+  const toast = duda.getByRole("status");
+  await sections.getByRole("link", { name: "Minha lista" }).click();
+  await expect(duda.getByRole("heading", { name: "Lista de desejos de Duda" })).toBeVisible();
+  await duda.getByLabel("Novo item").fill("Livro de receitas");
+  await duda.getByRole("button", { name: "Incluir na lista" }).click();
+  await expect(toast.filter({ hasText: "entrou na lista" })).toBeVisible();
+  await duda.getByLabel("Tamanhos").fill("Camiseta M, calçado 37");
+  await duda.getByLabel("Gosto de", { exact: true }).fill("Café e plantas");
+  await duda.getByRole("button", { name: "Salvar perfil" }).click();
+  await expect(toast.filter({ hasText: "Perfil salvo." })).toBeVisible();
+
+  // O botão de voltar leva ao nível de cima.
+  await duda.getByRole("link", { name: "Voltar para Natal de Teste" }).click();
+  await expect(duda.getByRole("heading", { name: "Oi, Duda" })).toBeVisible();
+
+  // Trocando para o filho pela própria navegação do app (sem recarregar a
+  // página), a lista dele abre vazia, sem os dados da mãe.
+  await duda
+    .getByRole("group", { name: "Perfis desta conta no grupo" })
+    .getByRole("button", { name: "Pedrinho" })
+    .click();
+  await expect(duda.getByRole("heading", { name: "Oi, Pedrinho" })).toBeVisible();
+  await sections.getByRole("link", { name: "Minha lista" }).click();
+  await expect(duda.getByRole("heading", { name: "Lista de desejos de Pedrinho" })).toBeVisible();
+  await expect(duda.getByRole("heading", { name: "Sobre Pedrinho" })).toBeVisible();
+  await expect(duda.getByLabel("Nome no grupo")).toHaveValue("Pedrinho");
+  await expect(duda.getByLabel("Tamanhos")).toHaveValue("");
+  await expect(duda.getByLabel("Gosto de", { exact: true })).toHaveValue("");
+  await expect(duda.getByLabel("Não gosto de")).toHaveValue("");
+  await expect(duda.getByText("Livro de receitas")).toHaveCount(0);
+
+  // E voltando para a mãe, os dados dela continuam lá.
+  await duda.getByRole("link", { name: "Voltar para Natal de Teste" }).click();
+  await duda
+    .getByRole("group", { name: "Perfis desta conta no grupo" })
+    .getByRole("button", { name: "Duda" })
+    .click();
+  await expect(duda.getByRole("heading", { name: "Oi, Duda" })).toBeVisible();
+  await sections.getByRole("link", { name: "Minha lista" }).click();
+  await expect(duda.getByLabel("Tamanhos")).toHaveValue("Camiseta M, calçado 37");
+  await expect(duda.getByText("Livro de receitas", { exact: true })).toBeVisible();
+
   // Sem conta, o convite do grupo pede login; com conta, nome repetido é recusado.
   await anonimo.goto(`/g/${slug}`);
   await expect(anonimo.getByRole("link", { name: "Entrar para participar" })).toBeVisible();

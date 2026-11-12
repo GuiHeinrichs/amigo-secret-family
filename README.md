@@ -39,7 +39,7 @@ npm run lint
 npm run build
 ```
 
-Os testes ponta a ponta usam o `npm run dev` que estiver aberto na porta 3000 (ou sobem um). Na primeira vez, instale o navegador com `npx playwright install chromium`.
+Os testes ponta a ponta sobem um servidor próprio na porta 3100, com banco embutido zerado a cada execução e sem serviços externos. Eles nunca usam o banco nem o e-mail configurados no `.env.local`, então podem rodar mesmo com o dev apontando para produção. Na primeira vez, instale o navegador com `npx playwright install chromium`.
 
 ## Como está organizado
 

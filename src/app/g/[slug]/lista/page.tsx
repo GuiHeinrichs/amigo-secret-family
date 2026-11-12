@@ -29,12 +29,18 @@ async function Content({ params }: { params: PageProps<"/g/[slug]/lista">["param
   const slug = group.slug;
   const mode = modeOf(group.mode);
   const wishes = await listWishes(me.id);
+  // Quem cuida de mais de uma pessoa precisa saber de quem é a lista na tela.
+  const named = ctx.profiles.length > 1;
 
   return (
     <GroupFrame ctx={ctx} active="lista" trail={[{ label: "Minha lista" }]}>
-      <h1 className="text-3xl">{mode.wishTitle}</h1>
+      <h1 className="text-3xl">
+        {mode.wishTitle}
+        {named && ` de ${me.name}`}
+      </h1>
       <p className="mt-2 text-ink-soft">
-        Só quem tirar você vê esta lista. Dá para mexer nela até o dia da troca.
+        Só quem tirar {named ? me.name : "você"} vê esta lista. Dá para mexer nela até o dia da
+        troca.
       </p>
 
       <div className="mt-4">
@@ -42,7 +48,7 @@ async function Content({ params }: { params: PageProps<"/g/[slug]/lista">["param
           wishes={wishes}
           empty={mode.wishEmpty}
           action={(wish) => (
-            <ActionForm action={removeWish} fields={{ slug, wishId: wish.id }}>
+            <ActionForm action={removeWish} fields={{ slug, wishId: wish.id }} toastNote>
               <ConfirmSubmit confirmLabel="Apagar?" className="btn btn-sm btn-ghost">
                 <Icon name="trash" size={18} />
                 <span className="sr-only">Apagar {wish.title}</span>
@@ -52,7 +58,13 @@ async function Content({ params }: { params: PageProps<"/g/[slug]/lista">["param
         />
       </div>
 
-      <ActionForm action={addWish} fields={{ slug }} resetOnSuccess className="panel mt-5 grid gap-4">
+      <ActionForm
+        action={addWish}
+        fields={{ slug }}
+        resetOnSuccess
+        toastNote
+        className="panel mt-5 grid gap-4"
+      >
         <div>
           <label className="label" htmlFor="title">
             Novo item
@@ -100,16 +112,22 @@ async function Content({ params }: { params: PageProps<"/g/[slug]/lista">["param
       <hr className="cutline" />
 
       <section>
-        <h2 className="text-xl">Sobre você</h2>
-        <p className="mt-1 text-ink-soft">Ajuda quem tirou você a acertar no presente.</p>
-        <ActionForm action={updateProfile} fields={{ slug }} className="mt-4 grid gap-4">
+        <h2 className="text-xl">{named ? `Sobre ${me.name}` : "Sobre você"}</h2>
+        <p className="mt-1 text-ink-soft">
+          Ajuda quem tirou {named ? me.name : "você"} a acertar no presente.
+        </p>
+        <ActionForm action={updateProfile} fields={{ slug }} toastNote className="mt-4 grid gap-4">
           <div>
             <label className="label" htmlFor="name">
-              Seu nome no grupo
+              Nome no grupo
             </label>
             <input id="name" name="name" className="input" maxLength={40} defaultValue={me.name} required />
           </div>
-          <AvatarPicker emoji={me.emoji} color={me.color} />
+          <AvatarPicker
+            emoji={me.emoji}
+            color={me.color}
+            legend={named ? `Bichinho de ${me.name}` : undefined}
+          />
           <div>
             <label className="label" htmlFor="sizes">
               Tamanhos

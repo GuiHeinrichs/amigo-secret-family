@@ -6,7 +6,7 @@ import { switchProfile } from "@/server/actions/account";
 import { unreadCount } from "@/server/chat";
 import { getContext, type Ctx } from "@/server/context";
 import type { Group, Participant } from "@/server/db/schema";
-import { Breadcrumbs, type Crumb } from "./breadcrumbs";
+import { BackButton, Breadcrumbs, type Crumb } from "./breadcrumbs";
 import { Garland } from "./client/effects/garland";
 import { MobileMenu, type MenuSection } from "./client/mobile-menu";
 import { ThemeSwitch } from "./client/theme-switch";
@@ -115,18 +115,19 @@ export async function GroupFrame({
     });
   }
   const width = wide ? "max-w-md lg:max-w-4xl" : "max-w-md";
+  const crumbs: Crumb[] = [
+    { label: "Início", href: "/" },
+    { label: group.name, href: `/g/${group.slug}` },
+    ...trail,
+  ];
+  // O botão de voltar leva ao nível logo acima da página atual.
+  const parent = crumbs.slice(0, -1).reverse().find((crumb) => crumb.href);
 
   return (
     <div className="theme min-h-dvh" data-mode={group.mode} style={themeStyle(group)}>
       <header className="wrap">
         <div className={`mx-auto flex ${width} items-center justify-between gap-2 px-5 pb-10 pt-3`}>
-          <Breadcrumbs
-            items={[
-              { label: "Início", href: "/" },
-              { label: group.name, href: `/g/${group.slug}` },
-              ...trail,
-            ]}
-          />
+          <Breadcrumbs items={crumbs} />
           <ThemeSwitch className="hidden md:inline-flex" />
           {/* No celular, "Organizar" e o resto da navegação ficam no menu lateral. */}
           {isAdmin && active !== "organizar" && (
@@ -179,9 +180,20 @@ export async function GroupFrame({
         </div>
       )}
 
+      {/*
+        A chave é o perfil ativo: ao trocar de perfil, a página inteira é
+        remontada. Sem isso, campos e estados da tela (formulários, papelzinho
+        aberto, conversa) continuariam mostrando os dados do perfil anterior.
+      */}
       <main
-        className={`mx-auto ${width} px-5 pt-7 ${items.length > 0 ? "pb-28" : nav ? "pb-16" : "pb-0"}`}
+        key={me?.id ?? "sem-perfil"}
+        className={`mx-auto ${width} px-5 pt-6 ${items.length > 0 ? "pb-28" : nav ? "pb-16" : "pb-0"}`}
       >
+        {parent?.href && (
+          <div className="mb-5">
+            <BackButton href={parent.href} to={parent.label} />
+          </div>
+        )}
         {children}
       </main>
 

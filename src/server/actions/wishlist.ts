@@ -57,6 +57,7 @@ export async function addWish(
       note: optional(form, "note", 140),
     });
     refresh();
+    return { ok: true, note: `“${title}” entrou na lista.` };
   });
 }
 
@@ -71,5 +72,6 @@ export async function removeWish(
       .delete(wishes)
       .where(and(eq(wishes.id, text(form, "wishId", 40)), eq(wishes.participantId, me.id)));
     refresh();
+    return { ok: true, note: "Item apagado da lista." };
   });
 }

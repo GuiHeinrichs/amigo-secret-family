@@ -58,7 +58,13 @@ async function Content({
         </div>
       </div>
       <div className="pt-4">
-        <Chat slug={ctx.group.slug} side={lado} initial={thread} quick={QUICK_QUESTIONS[lado]} />
+        <Chat
+          slug={ctx.group.slug}
+          profileId={ctx.me.id}
+          side={lado}
+          initial={thread}
+          quick={QUICK_QUESTIONS[lado]}
+        />
       </div>
     </GroupFrame>
   );

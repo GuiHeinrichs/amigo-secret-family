@@ -11,6 +11,39 @@ export type Crumb = {
 };
 
 /**
+ * Botão de voltar, bem visível no topo do conteúdo. Leva sempre ao nível de
+ * cima (e não ao histórico do navegador), para o destino ser previsível.
+ */
+export function BackButton({
+  href,
+  onSelect,
+  to,
+}: {
+  href?: string;
+  onSelect?: () => void;
+  /** Nome do destino, lido por leitores de tela: "Voltar para …". */
+  to: string;
+}) {
+  const className = "btn btn-quiet btn-sm";
+  const content = (
+    <>
+      <Icon name="back" size={18} />
+      Voltar
+      <span className="sr-only"> para {to}</span>
+    </>
+  );
+  return href ? (
+    <Link href={href} className={className}>
+      {content}
+    </Link>
+  ) : (
+    <button type="button" className={className} onClick={onSelect}>
+      {content}
+    </button>
+  );
+}
+
+/**
  * Trilha "onde estou": cada nível anterior é um atalho para voltar e o
  * último é a página atual. Fica sobre o papel de presente do cabeçalho,
  * numa etiqueta clara para o texto continuar legível.

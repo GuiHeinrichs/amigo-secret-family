@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { Breadcrumbs } from "@/components/breadcrumbs";
+import { BackButton, Breadcrumbs } from "@/components/breadcrumbs";
 import { Garland } from "@/components/client/effects/garland";
 import { LoginForm } from "@/components/client/login-form";
 import { GoogleLogo } from "@/components/icons";
@@ -29,7 +29,10 @@ export default function LoginPage({ searchParams }: PageProps<"/entrar">) {
         <Garland />
       </header>
       <main className="mx-auto max-w-md px-5 pb-16">
-        <h1 className="mt-8 text-4xl">Entre na sua conta</h1>
+        <div className="mt-6">
+          <BackButton href="/" to="o início" />
+        </div>
+        <h1 className="mt-5 text-4xl">Entre na sua conta</h1>
         <p className="mt-3 text-ink-soft">
           Seus grupos, listas e papelzinhos ficam guardados na conta e aparecem em qualquer
           aparelho. Se for a sua primeira vez, a conta é criada na hora.

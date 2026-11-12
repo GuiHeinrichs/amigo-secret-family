@@ -1,26 +1,18 @@
-import { existsSync, readFileSync } from "node:fs";
 import { defineConfig, devices } from "@playwright/test";
 
-const PORT = Number(process.env.PORT ?? 3000);
+const PORT = 3100;
 
-// Os testes criam dezenas de contas e grupos de mentira e dependem de o login
-// mostrar o código na tela. Com um banco de verdade no .env.local eles
-// sujariam esse banco, então a suíte se recusa a rodar.
-if (
-  !process.env.E2E_ALLOW_REAL_DB &&
-  existsSync(".env.local") &&
-  /^DATABASE_URL=.+/m.test(readFileSync(".env.local", "utf8"))
-) {
-  throw new Error(
-    "O .env.local aponta para um banco de verdade (DATABASE_URL). Os testes ponta a ponta " +
-      "gravariam dados de teste nele. Comente DATABASE_URL e RESEND_API_KEY no .env.local, " +
-      "reinicie o servidor de desenvolvimento e rode de novo.",
-  );
-}
-
+/*
+ * Os testes criam dezenas de contas e grupos de mentira e dependem de o login
+ * mostrar o código na tela. Por isso rodam sempre num servidor próprio, com
+ * banco embutido (PGlite) zerado a cada execução e sem nenhum serviço externo,
+ * mesmo que o .env.local aponte para o banco e o e-mail de verdade: variáveis
+ * definidas aqui, ainda que vazias, têm prioridade sobre as do .env.local.
+ */
 export default defineConfig({
   testDir: "./e2e",
-  timeout: 120_000,
+  // O fluxo completo passa por dezenas de páginas, e a primeira compilação de cada uma é lenta.
+  timeout: 300_000,
   expect: { timeout: 15_000 },
   fullyParallel: false,
   workers: 1,
@@ -30,11 +22,19 @@ export default defineConfig({
     ...devices["Pixel 7"],
     locale: "pt-BR",
   },
-  // Reaproveita o `npm run dev` que já estiver aberto; senão, sobe um.
   webServer: {
-    command: "npm run dev",
+    command: `node scripts/e2e-server.mjs ${PORT}`,
     url: `http://localhost:${PORT}`,
-    reuseExistingServer: true,
-    timeout: 120_000,
+    reuseExistingServer: false,
+    timeout: 180_000,
+    env: {
+      DATABASE_URL: "",
+      RESEND_API_KEY: "",
+      EMAIL_FROM: "",
+      GOOGLE_CLIENT_ID: "",
+      GOOGLE_CLIENT_SECRET: "",
+      NEXT_DIST_DIR: ".next-e2e",
+      PGLITE_DIR: ".data/e2e",
+    },
   },
 });
