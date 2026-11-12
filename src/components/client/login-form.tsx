@@ -39,7 +39,7 @@ export function LoginForm({ next }: { next: string }) {
   if (!sentTo) {
     return (
       <form
-        className="grid gap-4"
+        className="step-in grid gap-4"
         onSubmit={(event) => {
           event.preventDefault();
           askForCode();
@@ -79,7 +79,7 @@ export function LoginForm({ next }: { next: string }) {
 
   return (
     <form
-      className="grid gap-4"
+      className="step-in grid gap-4"
       onSubmit={(event) => {
         event.preventDefault();
         confirm();
@@ -103,19 +103,37 @@ export function LoginForm({ next }: { next: string }) {
         <label className="label" htmlFor="code">
           Código de 6 dígitos
         </label>
-        <input
-          id="code"
-          name="code"
-          className="input text-center text-2xl font-extrabold tracking-[0.4em]"
-          inputMode="numeric"
-          autoComplete="one-time-code"
-          pattern="[0-9]{6}"
-          maxLength={6}
-          required
-          autoFocus
-          value={code}
-          onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))}
-        />
+        {/*
+          Um campo só (para colar o código e para o preenchimento automático do
+          celular), invisível por cima de seis casas que mostram cada dígito.
+        */}
+        <div className="code">
+          <input
+            id="code"
+            name="code"
+            className="code-input"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            pattern="[0-9]{6}"
+            maxLength={6}
+            required
+            autoFocus
+            value={code}
+            onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))}
+          />
+          <div className="code-cells" aria-hidden="true">
+            {Array.from({ length: 6 }, (_, index) => (
+              <span
+                key={index}
+                className="code-cell"
+                data-filled={index < code.length}
+                data-active={index === Math.min(code.length, 5)}
+              >
+                {code[index] ?? ""}
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
       {error && (
         <p role="alert" className="notice notice-error">

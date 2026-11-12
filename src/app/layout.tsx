@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Kalam } from "next/font/google";
+import { SnowShake } from "@/components/client/effects/snow-shake";
 import { ThemeEffects } from "@/components/client/effects/theme-effects";
 import { Toaster } from "@/components/client/toaster";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
@@ -72,6 +73,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="theme">
         {children}
         <ThemeEffects />
+        <SnowShake />
         <Toaster />
       </body>
     </html>

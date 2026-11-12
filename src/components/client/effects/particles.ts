@@ -4,6 +4,10 @@ import type { Theme } from "@/lib/theme";
  * Partículas de fundo, desenhadas num <canvas> que cobre a tela e não
  * intercepta toques. No Natal é neve, que engrossa conforme o tempo de uso;
  * na Festa é um confete esparso que cai devagar.
+ *
+ * Dois cuidados com a neve: os flocos quase somem ao passar por cima de
+ * textos, para não atrapalhar a leitura, e a neve acumulada nos componentes
+ * pode ser derrubada (balançando o celular, por exemplo) com dropSnow().
  */
 
 const SNOW_START_KEY = "laco_neve_inicio";
@@ -20,7 +24,8 @@ const rand = (min: number, max: number) => min + Math.random() * (max - min);
  */
 export function snowLevel(): number {
   const override = new URLSearchParams(window.location.search).get("neve");
-  if (override !== null && override !== "" && !Number.isNaN(Number(override))) {
+  // Depois de derrubada, a neve volta a acumular do zero mesmo com ?neve= na URL.
+  if (!dropped && override !== null && override !== "" && !Number.isNaN(Number(override))) {
     return clamp(Number(override), 0, 1);
   }
   let start = Number(sessionStorage.getItem(SNOW_START_KEY));
@@ -44,7 +49,54 @@ export function publishSnowLevel(): number {
   return level;
 }
 
-type Flake = { x: number; y: number; r: number; vy: number; phase: number; sway: number; alpha: number };
+let dropped = false;
+
+/** Avisa a camada de partículas de que a neve acumulada vai cair. */
+const SNOW_DROP_EVENT = "laco:neve-cai";
+
+/**
+ * Derruba a neve acumulada no topo dos componentes: ela despenca em flocos
+ * grandes e volta a acumular do zero. Devolve false fora do tema de Natal.
+ */
+export function dropSnow(): boolean {
+  const root = document.documentElement;
+  if (root.dataset.tema === "festa") return false;
+  window.dispatchEvent(new CustomEvent<number>(SNOW_DROP_EVENT, { detail: snowLevel() }));
+  dropped = true;
+  try {
+    sessionStorage.setItem(SNOW_START_KEY, String(Date.now()));
+  } catch {
+    // sem sessionStorage a contagem já recomeça sozinha
+  }
+  // Durante a queda a neve some rápido, em vez de derreter devagar.
+  root.classList.add("snow-drop");
+  publishSnowLevel();
+  setTimeout(() => root.classList.remove("snow-drop"), 900);
+  navigator.vibrate?.(35);
+  return true;
+}
+
+type Flake = {
+  x: number;
+  y: number;
+  r: number;
+  vy: number;
+  phase: number;
+  sway: number;
+  alpha: number;
+  /** 1 = visível; cai para perto de 0 enquanto o floco passa sobre um texto. */
+  dim: number;
+  /** Empurrão lateral de quando alguém balança o celular. */
+  jolt: number;
+};
+/** Pedaço de neve que despenca de cima de um componente. */
+type Clump = { x: number; y: number; r: number; vx: number; vy: number; delay: number };
+type Box = { left: number; top: number; right: number; bottom: number };
+
+/** O que conta como texto para a neve desviar. */
+const TEXT = "h1,h2,h3,h4,p,li,label,dt,dd,summary,input,textarea,select,.btn,.chip";
+/** Onde a neve acumula (ver globals.css). */
+const SNOWY = ".panel,.btn-primary,.snowy";
 type Confetto = {
   x: number;
   y: number;
@@ -96,7 +148,60 @@ export function startParticles(canvas: HTMLCanvasElement, theme: Theme): () => v
     phase: rand(0, Math.PI * 2),
     sway: rand(8, 26),
     alpha: rand(0.55, 1),
+    dim: 1,
+    jolt: 0,
   });
+
+  // Áreas de texto na tela, medidas de tempos em tempos e depois de rolar.
+  let textBoxes: Box[] = [];
+  let measuredAt = -Infinity;
+  const measureText = () => {
+    const boxes: Box[] = [];
+    for (const element of document.querySelectorAll(TEXT)) {
+      const rect = element.getBoundingClientRect();
+      if (rect.width === 0 || rect.bottom < 0 || rect.top > height) continue;
+      boxes.push({
+        left: rect.left - 6,
+        top: rect.top - 4,
+        right: rect.right + 6,
+        bottom: rect.bottom + 4,
+      });
+      if (boxes.length >= 160) break;
+    }
+    textBoxes = boxes;
+  };
+  const remeasureSoon = () => {
+    measuredAt = -Infinity;
+  };
+  window.addEventListener("scroll", remeasureSoon, { passive: true });
+
+  // ——— Neve que despenca dos componentes ———
+  const clumps: Clump[] = [];
+  const onDrop = (event: Event) => {
+    const amount = (event as CustomEvent<number>).detail ?? level;
+    for (const element of document.querySelectorAll(SNOWY)) {
+      const rect = element.getBoundingClientRect();
+      if (rect.width < 24 || rect.bottom < 0 || rect.top > height) continue;
+      const button = element.classList.contains("btn-primary");
+      const inset = button ? 14 : 8;
+      const cap = button ? 2 + amount * 10 : 3 + amount * 20;
+      const count = Math.min(90, Math.round(((rect.width - inset * 2) / 9) * (0.35 + amount)));
+      for (let i = 0; i < count; i++) {
+        clumps.push({
+          x: rand(rect.left + inset, rect.right - inset),
+          y: rect.top - rand(0, cap),
+          r: rand(1.8, 2.6 + amount * 3.2),
+          vx: rand(-70, 70),
+          vy: rand(-150, -10),
+          delay: rand(0, 0.22),
+        });
+      }
+    }
+    if (clumps.length > 700) clumps.splice(0, clumps.length - 700);
+    // Os flocos que estão no ar também levam o tranco.
+    for (const flake of flakes) flake.jolt = rand(-260, 260);
+  };
+  window.addEventListener(SNOW_DROP_EVENT, onDrop);
 
   // ——— Confete ———
   const style = getComputedStyle(document.body);
@@ -135,7 +240,11 @@ export function startParticles(canvas: HTMLCanvasElement, theme: Theme): () => v
         level = publishSnowLevel();
         levelCheckedAt = now;
       }
-      const target = Math.round((26 + level * 130) * density());
+      if (now - measuredAt > 500) {
+        measureText();
+        measuredAt = now;
+      }
+      const target = Math.round((22 + level * 96) * density());
       while (flakes.length < target) flakes.push(newFlake(flakes.length > 12));
       if (flakes.length > target) flakes.length = target;
 
@@ -145,18 +254,50 @@ export function startParticles(canvas: HTMLCanvasElement, theme: Theme): () => v
       for (const flake of flakes) {
         flake.phase += dt * 1.1;
         flake.y += flake.vy * speed * dt;
-        flake.x += (Math.sin(flake.phase) * flake.sway + wind) * dt;
+        flake.x += (Math.sin(flake.phase) * flake.sway + wind + flake.jolt) * dt;
+        flake.jolt *= Math.pow(0.04, dt);
         if (flake.y > height + 6) Object.assign(flake, newFlake(true));
         if (flake.x < -10) flake.x = width + 8;
         if (flake.x > width + 10) flake.x = -8;
+
+        // Sobre um texto o floco esmaece, e volta a aparecer ao sair de cima.
+        const overText = textBoxes.some(
+          (box) =>
+            flake.x > box.left && flake.x < box.right && flake.y > box.top && flake.y < box.bottom,
+        );
+        flake.dim += ((overText ? 0.16 : 1) - flake.dim) * Math.min(1, dt * 9);
 
         ctx.beginPath();
         ctx.arc(flake.x, flake.y, flake.r, 0, Math.PI * 2);
         // No papel claro o floco branco some: ali ele ganha um azul bem suave.
         ctx.fillStyle = onDark
-          ? `rgba(255,255,255,${flake.alpha})`
-          : `rgba(176,200,232,${flake.alpha * 0.9})`;
+          ? `rgba(255,255,255,${flake.alpha * flake.dim})`
+          : `rgba(176,200,232,${flake.alpha * 0.85 * flake.dim})`;
         ctx.fill();
+      }
+
+      for (let i = clumps.length - 1; i >= 0; i--) {
+        const clump = clumps[i];
+        if (clump.delay > 0) {
+          clump.delay -= dt;
+        } else {
+          clump.vy += 1150 * dt;
+          clump.x += clump.vx * dt;
+          clump.y += clump.vy * dt;
+          if (clump.y > height + 12) {
+            clumps.splice(i, 1);
+            continue;
+          }
+        }
+        ctx.beginPath();
+        ctx.arc(clump.x, clump.y, clump.r, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255,255,255,0.97)";
+        ctx.fill();
+        if (!onDark) {
+          ctx.lineWidth = 1;
+          ctx.strokeStyle = "rgba(125,155,195,0.6)";
+          ctx.stroke();
+        }
       }
       return;
     }
@@ -192,6 +333,8 @@ export function startParticles(canvas: HTMLCanvasElement, theme: Theme): () => v
   return () => {
     cancelAnimationFrame(frame);
     window.removeEventListener("resize", resize);
+    window.removeEventListener("scroll", remeasureSoon);
+    window.removeEventListener(SNOW_DROP_EVENT, onDrop);
     ctx.clearRect(0, 0, width, height);
   };
 }

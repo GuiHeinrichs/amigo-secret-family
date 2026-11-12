@@ -392,6 +392,239 @@ p {
   }
 }
 
+/* ——— Tela Entrar ——— */
+
+/* Entrada em sequência: cada peça sobe e aparece um pouco depois da anterior. */
+.rise {
+  animation: rise 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 90ms + 240ms);
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    translate: 0 14px;
+  }
+}
+
+/* A turma: bichinhos que chegam pulando e ficam se balançando. */
+.crew {
+  display: flex;
+  align-items: center;
+  padding-left: 0.5rem;
+}
+.crew-face,
+.crew-you {
+  width: 3.25rem;
+  height: 3.25rem;
+  margin-left: -0.5rem;
+  box-shadow: 0 0 0 3px var(--paper);
+  animation:
+    crew-in 560ms cubic-bezier(0.2, 1.5, 0.4, 1) both,
+    crew-bob 2.4s ease-in-out infinite alternate;
+  animation-delay:
+    calc(var(--i, 0) * 90ms),
+    calc(var(--i, 0) * 260ms + 700ms);
+}
+.crew-face {
+  font-size: 1.7rem;
+}
+.crew-you {
+  display: grid;
+  place-items: center;
+  flex: none;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 2px dashed var(--ink);
+  font-size: 0.8125rem;
+  font-weight: 800;
+  animation:
+    crew-in 560ms cubic-bezier(0.2, 1.5, 0.4, 1) both,
+    crew-bob 2.4s ease-in-out infinite alternate,
+    crew-call 2.2s ease-out infinite;
+  animation-delay:
+    calc(var(--i, 0) * 90ms),
+    calc(var(--i, 0) * 260ms + 700ms),
+    1.4s;
+}
+@keyframes crew-in {
+  from {
+    opacity: 0;
+    scale: 0.3;
+  }
+}
+@keyframes crew-bob {
+  to {
+    translate: 0 -6px;
+    rotate: 5deg;
+  }
+}
+/* O lugar vago chama a atenção com um anel dourado que se abre. */
+@keyframes crew-call {
+  0% {
+    box-shadow:
+      0 0 0 3px var(--paper),
+      0 0 0 3px color-mix(in oklab, var(--gold) 80%, transparent);
+  }
+  70%,
+  100% {
+    box-shadow:
+      0 0 0 3px var(--paper),
+      0 0 0 16px transparent;
+  }
+}
+
+/* O cartão balança como etiqueta pendurada antes de parar. */
+.login-card {
+  position: relative;
+  transform-origin: 50% -3rem;
+  animation: card-swing 1150ms cubic-bezier(0.3, 0.7, 0.3, 1) 380ms both;
+}
+@keyframes card-swing {
+  0% {
+    opacity: 0;
+    rotate: -7deg;
+    translate: 0 -18px;
+  }
+  30% {
+    opacity: 1;
+    rotate: 4deg;
+    translate: 0 0;
+  }
+  55% {
+    rotate: -2.4deg;
+  }
+  78% {
+    rotate: 1deg;
+  }
+  100% {
+    rotate: 0deg;
+  }
+}
+/* Selo dourado carimbado no canto do cartão. */
+.login-seal {
+  position: absolute;
+  z-index: 2;
+  /* Sobe o bastante para não cobrir o texto do cartão. */
+  top: -2.75rem;
+  right: 1.1rem;
+  display: grid;
+  place-items: center;
+  width: 3.6rem;
+  height: 3.6rem;
+  border-radius: 50%;
+  background: var(--gold);
+  color: #2a1420;
+  box-shadow:
+    0 3px 0 color-mix(in oklab, var(--gold) 60%, black),
+    0 0 0 4px var(--paper),
+    0 0 0 6px color-mix(in oklab, var(--gold) 60%, black);
+  animation:
+    seal-stamp 460ms cubic-bezier(0.2, 1.4, 0.4, 1) 1250ms both,
+    seal-sway 5s ease-in-out 2.2s infinite alternate;
+}
+@keyframes seal-stamp {
+  from {
+    opacity: 0;
+    scale: 2.4;
+    rotate: -30deg;
+  }
+}
+@keyframes seal-sway {
+  from {
+    rotate: -7deg;
+  }
+  to {
+    rotate: 9deg;
+  }
+}
+/* O logotipo do Google dá uma voltinha ao passar o dedo ou o mouse. */
+.login-google svg {
+  transition: rotate 500ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.login-google:hover svg,
+.login-google:focus-visible svg {
+  rotate: 360deg;
+}
+
+/* Troca de passo (e-mail → código): o novo conteúdo desliza para dentro. */
+.step-in {
+  animation: step-in 340ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes step-in {
+  from {
+    opacity: 0;
+    translate: 18px 0;
+  }
+}
+
+/* Código de 6 dígitos: um campo invisível sobre seis casas. */
+.code {
+  position: relative;
+}
+.code-input {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  font-size: 1rem;
+  cursor: text;
+}
+.code-cells {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.4rem;
+}
+.code-cell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 3.6rem;
+  border-radius: 14px;
+  background: var(--field);
+  border: 2px solid var(--line);
+  font-size: 1.7rem;
+  font-weight: 800;
+  line-height: 1;
+}
+.code-cell[data-filled="true"] {
+  border-color: var(--ink);
+  animation: cell-pop 200ms cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+@keyframes cell-pop {
+  from {
+    scale: 0.82;
+  }
+}
+.code-input:focus + .code-cells .code-cell[data-active="true"] {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--gold) 70%, transparent);
+}
+/* Cursor piscando na casa da vez. */
+.code-input:focus + .code-cells .code-cell[data-active="true"][data-filled="false"]::after {
+  content: "";
+  width: 2px;
+  height: 1.6rem;
+  background: var(--ink);
+  animation: caret 1s steps(1) infinite;
+}
+@keyframes caret {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Botões do aviso "balance o celular". */
+.snow-hint-btn {
+  flex: none;
+  min-height: 2.5rem;
+  padding: 0 0.9rem;
+  border-radius: 999px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
 /* ——— Player da apresentação ——— */
 .player {
   position: relative;
@@ -710,7 +943,11 @@ button:active > span > .player-seal {
     transition-duration: 1ms !important;
   }
   /* Animação em laço com 1 ms viraria um pisca-pisca. */
-  .skeleton-pulse {
+  .skeleton-pulse,
+  .crew-face,
+  .crew-you,
+  .login-seal,
+  .code-cell::after {
     animation: none !important;
   }
 }
@@ -750,6 +987,25 @@ html[data-tema="natal"] :is(.panel, .btn-primary, .snowy)::before {
   filter: drop-shadow(0 1.5px 0 rgb(125 155 195 / 0.55))
     drop-shadow(0 -0.5px 0 rgb(125 155 195 / 0.3));
   transition: height 3s ease;
+}
+/* Neve derrubada: some depressa, com um tranco nos componentes. */
+html.snow-drop :is(.panel, .btn-primary, .snowy)::before {
+  transition: height 0.35s cubic-bezier(0.5, 0, 1, 0.6);
+}
+/* (o cartão da tela Entrar fica de fora: ele já tem a própria animação) */
+html.snow-drop[data-tema="natal"] .panel:not(.login-card) {
+  animation: snow-jolt 0.42s ease;
+}
+@keyframes snow-jolt {
+  20% {
+    translate: -4px 0;
+  }
+  45% {
+    translate: 4px 0;
+  }
+  70% {
+    translate: -2px 0;
+  }
 }
 html[data-tema="natal"] .btn-primary::before {
   left: 14px;
