@@ -56,12 +56,13 @@ export async function signOutAction() {
 }
 
 /** Troca o perfil "na tela" quando a conta cuida de mais de uma pessoa no grupo. */
-export async function switchProfile(slug: string, participantId: string) {
+/** Devolve se a troca aconteceu, para a tela só avisar o que de fato mudou. */
+export async function switchProfile(slug: string, participantId: string): Promise<boolean> {
   const ctx = await requireCtx(slug).catch(() => null);
-  if (ctx?.profiles.some((p) => p.id === participantId)) {
-    await setActiveProfile(ctx.group.id, participantId);
-  }
+  const changed = !!ctx?.profiles.some((p) => p.id === participantId);
+  if (ctx && changed) await setActiveProfile(ctx.group.id, participantId);
   refresh();
+  return changed;
 }
 
 const sameName = (a: string, b: string) =>

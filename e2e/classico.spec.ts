@@ -70,7 +70,12 @@ test("fluxo clássico com contas: convite, dependente, sorteio, lacre, chat, lis
     .getByRole("group", { name: "Perfis desta conta no grupo" })
     .getByRole("button", { name: "Pedrinho" })
     .click();
+  // Durante a troca a página dá lugar a um esqueleto; ao terminar, um aviso confirma.
+  await expect(duda.getByText("Trocando para Pedrinho…")).toBeVisible();
+  await expect(duda.getByRole("heading", { name: "Oi, Duda" })).toBeHidden();
   await expect(duda.getByRole("heading", { name: "Oi, Pedrinho" })).toBeVisible();
+  await expect(duda.getByText("Trocando para Pedrinho…")).toHaveCount(0);
+  await expect(toast.filter({ hasText: "agora você está vendo como Pedrinho" })).toBeVisible();
   await sections.getByRole("link", { name: "Minha lista" }).click();
   await expect(duda.getByRole("heading", { name: "Lista de desejos de Pedrinho" })).toBeVisible();
   await expect(duda.getByRole("heading", { name: "Sobre Pedrinho" })).toBeVisible();

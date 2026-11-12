@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { CSSProperties, ReactNode } from "react";
 import { occasionOf, occasionVars } from "@/lib/occasions";
-import { switchProfile } from "@/server/actions/account";
+import { ProfileSwitcher } from "./client/profile-switcher";
 import { unreadCount } from "@/server/chat";
 import { getContext, type Ctx } from "@/server/context";
 import type { Group, Participant } from "@/server/db/schema";
@@ -160,33 +160,16 @@ export async function GroupFrame({
         </p>
       </div>
 
-      {/* Quem cuida de mais de uma pessoa no grupo escolhe aqui qual está vendo. */}
-      {profiles.length > 1 && me && (
-        <div className={`mx-auto ${width} px-5 pt-4`}>
-          <div
-            role="group"
-            aria-label="Perfis desta conta no grupo"
-            className="flex flex-wrap items-center gap-2"
-          >
-            <span className="hint text-sm">Vendo como</span>
-            {profiles.map((profile) => (
-              <form key={profile.id} action={switchProfile.bind(null, group.slug, profile.id)}>
-                <button
-                  type="submit"
-                  aria-pressed={profile.id === me.id}
-                  className={`chip !py-1 !pl-1 ${
-                    profile.id === me.id ? "!bg-ink !text-paper" : ""
-                  }`}
-                >
-                  <Avatar person={profile} size="avatar-sm" />
-                  {profile.name}
-                </button>
-              </form>
-            ))}
-          </div>
-        </div>
-      )}
-
+      {/*
+        Seletor de perfil (para quem cuida de mais de uma pessoa no grupo) em
+        volta do conteúdo: durante a troca, a página dá lugar a um esqueleto.
+      */}
+      <ProfileSwitcher
+        slug={group.slug}
+        profiles={profiles.map(({ id, name, emoji, color }) => ({ id, name, emoji, color }))}
+        activeId={me?.id ?? null}
+        width={width}
+      >
       {/*
         A chave é o perfil ativo: ao trocar de perfil, a página inteira é
         remontada. Sem isso, campos e estados da tela (formulários, papelzinho
@@ -203,6 +186,7 @@ export async function GroupFrame({
         )}
         {children}
       </main>
+      </ProfileSwitcher>
 
       {items.length > 0 && me && (
         <nav
