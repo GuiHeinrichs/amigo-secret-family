@@ -46,8 +46,14 @@ test("menu lateral no celular: abre, navega, fecha e some em telas grandes", asy
   await burger.click();
   await expect(menu).toBeVisible();
   await menu.getByRole("link", { name: "Meus grupos" }).click();
-  await expect(phone.getByRole("heading", { name: "Seus grupos" })).toBeVisible();
-  await phone.getByRole("link", { name: /Menu de Teste/ }).click();
+  // "Meus grupos" abre a página só dos grupos, com o cartão de cada um.
+  await expect(phone).toHaveURL(/\/grupos$/);
+  await expect(phone.getByRole("heading", { name: "Meus grupos" })).toBeVisible();
+  await expect(phone.getByText("1 grupo na sua conta.")).toBeVisible();
+  const card = phone.getByRole("link", { name: /Menu de Teste/ });
+  await expect(card).toContainText("Esperando o sorteio");
+  await expect(card).toContainText("Você organiza");
+  await card.click();
   await expect(phone).toHaveURL(new RegExp(`/g/${slug}$`));
   await expect(phone.getByRole("heading", { name: "Oi, Zeca" })).toBeVisible();
   await expect(menu).toBeHidden();
@@ -56,7 +62,7 @@ test("menu lateral no celular: abre, navega, fecha e some em telas grandes", asy
   await burger.click();
   await expect(menu).toBeVisible();
   await phone.goBack();
-  await expect(phone.getByRole("heading", { name: "Seus grupos" })).toBeVisible();
+  await expect(phone.getByRole("heading", { name: "Meus grupos" })).toBeVisible();
   await phone.goForward();
   await expect(phone.getByRole("heading", { name: "Oi, Zeca" })).toBeVisible();
   await expect(menu).toBeHidden();

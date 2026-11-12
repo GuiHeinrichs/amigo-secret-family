@@ -392,6 +392,99 @@ p {
   }
 }
 
+/* ——— Cartão de grupo ——— */
+
+/*
+ * Cada grupo é um presente embrulhado: faixa do papel da ocasião, fita e o
+ * emoji no lugar do laço. O contorno e a sombra dura são os mesmos dos botões,
+ * para o cartão parecer o que é: algo de tocar. Fica fora de @layer porque
+ * precisa vencer o fundo que a classe .theme (usada no cartão) aplica.
+ */
+.group-card {
+  position: relative;
+  display: block;
+  /* Lado a lado, os cartões de uma mesma linha ficam da mesma altura. */
+  height: 100%;
+  border: 2px solid var(--ink);
+  border-radius: 22px;
+  background: var(--field);
+  box-shadow: 0 4px 0 var(--ink);
+  transition:
+    transform 90ms ease,
+    box-shadow 90ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.group-card:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--ink);
+}
+.group-card:focus-visible {
+  border-radius: 22px;
+  outline-offset: 3px;
+}
+.group-card-band {
+  display: block;
+  height: 2.75rem;
+  /* O raio de dentro: o do cartão menos a borda. */
+  border-radius: 20px 20px 0 0;
+  overflow: hidden;
+}
+/* A fita desce pela faixa bem atrás do laço. */
+.group-card-ribbon {
+  position: absolute;
+  inset-block: 0;
+  left: 2.35rem;
+  width: 0.8rem;
+}
+/* No pelo de onça a fita dourada sumiria: ela escurece. */
+html:not([data-tema="festa"]) .group-card[data-mode="onca"] .group-card-ribbon {
+  background: #2a1a0c;
+}
+.group-card-body {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 0.85rem;
+  padding: 0 1rem 1.1rem;
+}
+.group-card-bow {
+  /* Por cima da faixa, que é posicionada e senão cobriria a metade de cima. */
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  margin-top: -1.5rem;
+  border-radius: 50%;
+  background: var(--gold);
+  font-size: 1.75rem;
+  line-height: 1;
+  box-shadow:
+    0 0 0 2px var(--ink),
+    0 3px 0 2px var(--ink);
+  transition: rotate 320ms cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+/* O laço dá uma torcidinha para quem passa o mouse ou chega pelo teclado. */
+.group-card:hover .group-card-bow,
+.group-card:focus-visible .group-card-bow {
+  rotate: -10deg;
+}
+/* Grupo encerrado: continua lá, mas sem disputar atenção. */
+.group-card-quiet {
+  border-color: var(--line);
+  box-shadow: none;
+}
+.group-card-quiet:active {
+  transform: none;
+  box-shadow: none;
+}
+.group-card-quiet .group-card-band {
+  filter: saturate(0.45);
+}
+.group-card-quiet .group-card-bow {
+  box-shadow: 0 0 0 2px var(--line);
+}
+
 /* ——— Tela Entrar ——— */
 
 /* Entrada em sequência: cada peça sobe e aparece um pouco depois da anterior. */

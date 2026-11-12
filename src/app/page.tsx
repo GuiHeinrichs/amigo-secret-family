@@ -5,19 +5,11 @@ import { Scene } from "@/components/client/effects/scene";
 import { MobileMenu } from "@/components/client/mobile-menu";
 import { Presentation } from "@/components/client/presentation";
 import { ThemeSwitch } from "@/components/client/theme-switch";
+import { GroupCard } from "@/components/group-card";
 import { Icon, type IconName } from "@/components/icons";
-import { modeOf, occasionOf } from "@/lib/occasions";
 import { signOutAction } from "@/server/actions/account";
 import { listMyGroups } from "@/server/queries";
 import { getUser } from "@/server/session";
-
-const STATUS_LABEL: Record<string, string> = {
-  montando: "Esperando o sorteio",
-  sorteando: "Sorteio aberto",
-  sorteado: "Sorteio feito",
-  festa: "Em festa",
-  encerrado: "Encerrado",
-};
 
 const STEPS = [
   {
@@ -215,33 +207,18 @@ async function MyGroups() {
   if (mine.length === 0) return null;
   return (
     <section className="pt-8">
-      <h2 className="text-2xl">Seus grupos</h2>
-      <ul className="mt-4 grid gap-3 md:grid-cols-2">
-        {mine.map(({ group, isAdmin, names }) => {
-          const occasion = occasionOf(group.occasion);
-          return (
-            <li key={group.id}>
-              <Link
-                href={names.length > 0 ? `/g/${group.slug}` : `/g/${group.slug}/admin`}
-                className="panel flex items-center gap-3"
-              >
-                <span className="avatar" style={{ background: occasion.brand }} aria-hidden="true">
-                  {occasion.emoji}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-extrabold">{group.name}</span>
-                  <span className="hint block">
-                    {modeOf(group.mode).label}, {STATUS_LABEL[group.status]?.toLowerCase()}
-                    {isAdmin ? " (você organiza)" : ""}
-                  </span>
-                  {names.length > 1 && (
-                    <span className="hint block">Na sua conta: {names.join(", ")}</span>
-                  )}
-                </span>
-              </Link>
-            </li>
-          );
-        })}
+      <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+        <h2 className="text-3xl md:text-4xl">Meus grupos</h2>
+        <Link href="/grupos" className="font-semibold underline decoration-2 underline-offset-4">
+          Ver só os grupos
+        </Link>
+      </div>
+      <ul className="mt-6 grid gap-6 md:grid-cols-2">
+        {mine.map((entry) => (
+          <li key={entry.group.id}>
+            <GroupCard entry={entry} quiet={entry.group.status === "encerrado"} />
+          </li>
+        ))}
       </ul>
     </section>
   );

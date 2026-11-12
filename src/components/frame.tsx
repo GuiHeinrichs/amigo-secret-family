@@ -123,7 +123,8 @@ export async function GroupFrame({
   }
   const width = wide ? "max-w-md lg:max-w-4xl" : "max-w-md";
   const crumbs: Crumb[] = [
-    { label: "Início", href: "/" },
+    // Quem tem conta sobe para a lista dos seus grupos; os demais, para a capa.
+    ctx.user ? { label: "Grupos", href: "/grupos" } : { label: "Início", href: "/" },
     { label: group.name, href: `/g/${group.slug}` },
     ...trail,
   ];

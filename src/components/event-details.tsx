@@ -1,7 +1,7 @@
 import { daysUntil, formatBudget, formatEventDate, plural } from "@/lib/format";
 import type { Group } from "@/server/db/schema";
 
-function countdown(date: string): string {
+export function countdown(date: string): string {
   const days = daysUntil(date);
   if (days === 0) return "É hoje!";
   if (days === 1) return "É amanhã.";

@@ -31,12 +31,15 @@ export function MobileMenu({
   title = "Laço",
   sections = [],
   email,
+  groupsCurrent = false,
 }: {
   /** Nome do grupo, quando o menu está numa página de grupo. */
   title?: string;
   sections?: MenuSection[];
   /** E-mail da conta logada; `null` mostra "Entrar". */
   email?: string | null;
+  /** O menu está na própria página "Meus grupos". */
+  groupsCurrent?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
@@ -276,7 +279,15 @@ export function MobileMenu({
             )}
             <ul>
               <li>
-                <Link href="/" onClick={close} className={itemClass}>
+                {/* Quem tem conta vai direto para os seus grupos; os demais, para a capa. */}
+                <Link
+                  href={email ? "/grupos" : "/"}
+                  onClick={close}
+                  aria-current={groupsCurrent ? "page" : undefined}
+                  className={`${itemClass} ${
+                    groupsCurrent ? "bg-paper-2 font-extrabold text-brand" : ""
+                  }`}
+                >
                   <Icon name="home" size={24} />
                   {email ? "Meus grupos" : "Início"}
                 </Link>
