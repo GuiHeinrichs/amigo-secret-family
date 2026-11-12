@@ -13,6 +13,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Projeto à parte (Remotion), com as próprias dependências.
+    "video/**",
   ]),
 ]);
 

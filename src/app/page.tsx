@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { Garland } from "@/components/client/effects/garland";
 import { Scene } from "@/components/client/effects/scene";
 import { MobileMenu } from "@/components/client/mobile-menu";
+import { Presentation } from "@/components/client/presentation";
 import { ThemeSwitch } from "@/components/client/theme-switch";
 import { Icon, type IconName } from "@/components/icons";
 import { modeOf, occasionOf } from "@/lib/occasions";
@@ -92,8 +93,8 @@ export default function Home({ searchParams }: PageProps<"/">) {
               <Link href="/criar" className="btn btn-primary text-lg">
                 Criar um grupo
               </Link>
-              <a href="#como-funciona" className="btn btn-ghost">
-                Como funciona
+              <a href="#apresentacao" className="btn btn-ghost">
+                Ver a apresentação
               </a>
             </div>
           </div>
@@ -116,6 +117,11 @@ export default function Home({ searchParams }: PageProps<"/">) {
         <Suspense>
           <MyGroups />
         </Suspense>
+
+        <hr className="cutline" />
+
+        {/* Apresentação em vídeo, com player próprio dividido em capítulos. */}
+        <Presentation />
 
         <hr className="cutline" />
 

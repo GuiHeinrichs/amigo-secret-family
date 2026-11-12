@@ -1,0 +1,22 @@
+{
+  "name": "laco-video",
+  "private": true,
+  "description": "Vídeo de apresentação do Laço, feito com Remotion. Projeto à parte: não entra no build do site.",
+  "scripts": {
+    "studio": "remotion studio",
+    "music": "node scripts/music.mjs",
+    "render": "remotion render Apresentacao out/apresentacao.mp4 --codec=h264 --crf=24 --audio-bitrate=128k",
+    "poster": "remotion still Apresentacao out/apresentacao.jpg --frame=34 --jpeg-quality=82"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.543",
+    "@remotion/google-fonts": "4.0.543",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "remotion": "4.0.543"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "typescript": "^5"
+  }
+}

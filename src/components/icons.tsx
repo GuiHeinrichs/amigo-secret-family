@@ -23,6 +23,11 @@ const paths = {
   send: "M4 12 20 4.5 15 20l-3-6.5zM12 13.5 20 4.5",
   bow: "M12 12c-2.5-4-6.5-5-7.5-3s1 5 7.5 3zm0 0c2.5-4 6.5-5 7.5-3s-1 5-7.5 3zm0 0-3 7m3-7 3 7",
   share: "M12 15V4M8 7.5 12 4l4 3.5M5.5 12v7.5h13V12",
+  play: "M8 5.5v13l10.5-6.5z",
+  pause: "M8.5 5.5v13M15.5 5.5v13",
+  sound: "M4.5 9.5h3l4.5-4v13l-4.5-4h-3zM15.5 9.2a4 4 0 0 1 0 5.6M18 6.8a7.4 7.4 0 0 1 0 10.4",
+  soundOff: "M4.5 9.5h3l4.5-4v13l-4.5-4h-3zM16 9.5l4.5 5M20.5 9.5 16 14.5",
+  expand: "M4.5 9.5v-5h5M19.5 9.5v-5h-5M4.5 14.5v5h5M19.5 14.5v5h-5",
 } as const;
 
 export type IconName = keyof typeof paths;

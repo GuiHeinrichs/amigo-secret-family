@@ -46,4 +46,9 @@ next-env.d.ts
 /test-results/
 /playwright-report/
 
+# vídeo de apresentação (Remotion): só o código entra no repositório
+/video/node_modules/
+/video/out/
+/video/public/trilha.wav
+
 !.env.example
